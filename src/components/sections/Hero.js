@@ -4,17 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import React from 'react';
 
-const draw = {
-  hidden: { pathLength: 0, opacity: 0 },
-  visible: {
-    pathLength: 1,
-    opacity: 1,
-    transition: {
-      pathLength: { duration: 2, bounce: 0 },
-      opacity: { duration: 0.5 }
-    }
-  }
-};
+
 
 // Pre-defined particle positions to avoid hydration mismatch
 const particles = [
@@ -25,57 +15,89 @@ const particles = [
   { width: 3, height: 3, left: "90%", top: "70%" }
 ];
 
-// Floating animation for background elements
-const float = {
-  animate: {
-    y: [0, -10, 0],
-    transition: {
-      duration: 5,
-      repeat: Infinity,
-      ease: "easeInOut"
+
+
+
+
+// Background Mesh Component
+const BackgroundMesh = React.memo(({isSmallScreen}) => {
+
+
+  // Animation variants for BackgroundMesh
+const meshVariants = {
+  gradient: {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: animate => ({
+      scale: animate.scale,
+      opacity: animate.opacity,
+      transition: {
+        duration: animate.duration,
+        repeat: isSmallScreen ? 0 : Infinity,
+        ease: "easeInOut",
+        delay: animate.delay || 0
+      }
+    })
+  },
+  particles: {
+    hidden: { opacity: 0, y: 0 },
+    visible: {
+      y: [0, -20, 0],
+      opacity: [0.2, 0.5, 0.2],
+      transition: {
+        duration: 3,
+        repeat: isSmallScreen ? 0 : Infinity,
+        ease: "easeInOut"
+      }
+    }
+  },
+  lightStreak: {
+    hidden: { x: '-100%' },
+    visible: {
+      x: ['100%', '200%'],
+      transition: {
+        duration: 8,
+        repeat: isSmallScreen ? 0 : Infinity,
+        ease: "linear"
+      }
     }
   }
 };
 
-// Background Mesh Component
-const BackgroundMesh = () => (
-  <div className="absolute inset-0 overflow-hidden">
+  return (<div className="absolute inset-0 overflow-hidden">
     {/* Base gradient */}
     <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/80" />
     
     {/* Animated gradient orbs */}
     <motion.div
+      variants={meshVariants.gradient}
+      custom={{
+        scale: [1, 1.1, 1],
+        opacity: [0.3, 0.5, 0.3],
+        duration: 8
+      }}
+      initial="hidden"
+      animate="visible"
       className="absolute -top-1/4 -right-1/4 w-[500px] h-[500px] rounded-full"
       style={{
         background: 'radial-gradient(circle at center, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
         filter: 'blur(40px)',
       }}
-      animate={{
-        scale: [1, 1.1, 1],
-        opacity: [0.3, 0.5, 0.3],
-      }}
-      transition={{
-        duration: 8,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }}
     />
     
     <motion.div
+      variants={meshVariants.gradient}
+      custom={{
+        scale: [1, 1.2, 1],
+        opacity: [0.2, 0.4, 0.2],
+        duration: 10,
+        delay: 1
+      }}
+      initial="hidden"
+      animate="visible"
       className="absolute -bottom-1/4 -left-1/4 w-[600px] h-[600px] rounded-full"
       style={{
         background: 'radial-gradient(circle at center, rgba(79, 70, 229, 0.1) 0%, transparent 70%)',
         filter: 'blur(60px)',
-      }}
-      animate={{
-        scale: [1, 1.2, 1],
-        opacity: [0.2, 0.4, 0.2],
-      }}
-      transition={{
-        duration: 10,
-        repeat: Infinity,
-        ease: "easeInOut",
-        delay: 1
       }}
     />
 
@@ -99,15 +121,11 @@ const BackgroundMesh = () => (
           top: particle.top,
           filter: 'blur(1px)',
         }}
-        animate={{
-          y: [0, -20, 0],
-          opacity: [0.2, 0.5, 0.2],
-        }}
+        variants={meshVariants.particles}
+        initial="hidden"
+        animate="visible"
         transition={{
-          duration: 3,
-          repeat: Infinity,
-          delay: i * 0.2,
-          ease: "easeInOut"
+          delay: i * 0.2
         }}
       />
     ))}
@@ -115,33 +133,65 @@ const BackgroundMesh = () => (
     {/* Light streaks */}
     <motion.div
       className="absolute -top-1/2 left-0 w-full h-screen rotate-12 bg-gradient-to-b from-transparent via-indigo-100/20 to-transparent"
-      animate={{
-        x: ['-100%', '200%'],
-      }}
-      transition={{
-        duration: 8,
-        repeat: Infinity,
-        ease: "linear",
-      }}
+      variants={meshVariants.lightStreak}
+      initial="hidden"
+      animate="visible"
     />
   </div>
-);
+)});
 
 export default function Hero() {
-  const [isAnimating, setIsAnimating] = React.useState(false);
-  const [isSmallScreen, setIsSmallScreen] = React.useState(false);
+  const [isAnimating] = React.useState(true);
+  const [isSmallScreen] = React.useState(() => {
+    return window.innerWidth < 800;
+});
 
-  React.useEffect(() => {
-    setIsAnimating(true);
-    
-    const checkScreenSize = () => {
-      setIsSmallScreen(window.innerWidth < 640); // sm breakpoint
-    };
-
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
+  // Animation variants for main Hero component
+  const heroVariants = {
+    svg: {
+      hidden: { opacity: 0 },
+      visible: { opacity: 1 }
+    },
+    deviceGroup: {
+      hidden: { opacity: 0, x: -50 },
+      visible: { opacity: 1, x: 0 }
+    },
+    serverGroup: {
+      hidden: { opacity: 0 },
+      visible: { opacity: 1 }
+    },
+    authFlow: {
+      hidden: { pathLength: 0, opacity: 0 },
+      visible: {
+        pathLength: 1,
+        opacity: 1,
+        transition: {
+          duration: 1,
+          repeat: isSmallScreen ? 0 : Infinity,
+          repeatDelay: 3
+        }
+      }
+    },
+    arrowHead: {
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: {
+          duration: 0.5,
+          repeat: isSmallScreen ? 0 : Infinity,
+          repeatDelay: 3
+        }
+      }
+    },
+    successState: {
+      hidden: { opacity: 0, scale: 0.8 },
+      visible: {
+        opacity: [0, 0, 1],
+        scale: [0.8, 0.8, 1],
+        transition: { duration: 0.5, delay: 3.5 }
+      }
+    }
+  };
 
   return (
     <div className="relative bg-white overflow-hidden">
@@ -197,23 +247,22 @@ export default function Hero() {
         </div>
       </div>
       <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
-        <BackgroundMesh />
+        <BackgroundMesh  isSmallScreen={isSmallScreen}/>
         <div className="h-[360px] w-full sm:h-[500px] md:h-[600px] lg:w-full lg:h-full relative overflow-hidden">
           <div className="h-full w-full flex items-center justify-center">
-            <motion.svg
-              width="100%"
-              height="100%"
-              viewBox={isSmallScreen ? "0 0 800 800" : "0 0 800 700"}
-              initial="hidden"
-              animate="visible"
-              className="w-full max-w-3xl sm:max-w-4xl md:max-w-5xl lg:max-w-6xl scale-125"
-            >
+          <motion.svg
+  width="100%"
+  height="100%"
+  viewBox={isSmallScreen ? "0 0 800 800" : "0 0 800 700"}
+  initial="hidden"
+  animate="visible"
+  variants={heroVariants.svg}
+  className="w-full max-w-3xl sm:max-w-4xl md:max-w-5xl lg:max-w-6xl transform scale-125"
+  style={{ willChange: 'transform' }}
+>
               {/* User Device */}
               <motion.g
-                variants={{
-                  hidden: { opacity: 0, x: -50 },
-                  visible: { opacity: 1, x: 0 }
-                }}
+                variants={heroVariants.deviceGroup}
               >
                 {/* Device Frame */}
                 <rect
@@ -444,10 +493,7 @@ export default function Hero() {
 
               {/* Server */}
               <motion.g
-                variants={{
-                  hidden: { opacity: 0 },
-                  visible: { opacity: 1 }
-                }}
+                variants={heroVariants.serverGroup}
               >
                 {/* Server Frame */}
                 <rect
@@ -572,33 +618,12 @@ export default function Hero() {
                   stroke="#6366F1"
                   strokeWidth="2"
                   fill="none"
-                  variants={{
-                    hidden: { pathLength: 0, opacity: 0 },
-                    visible: {
-                      pathLength: 1,
-                      opacity: 1,
-                      transition: {
-                        duration: 1,
-                        repeat: Infinity,
-                        repeatDelay: 3
-                      }
-                    }
-                  }}
+                  variants={heroVariants.authFlow}
                 />
                 <motion.polygon
                   points="495,245 505,250 495,255"
                   fill="#6366F1"
-                  variants={{
-                    hidden: { opacity: 0 },
-                    visible: {
-                      opacity: 1,
-                      transition: {
-                        duration: 0.5,
-                        repeat: Infinity,
-                        repeatDelay: 3
-                      }
-                    }
-                  }}
+                  variants={heroVariants.arrowHead}
                 />
 
                 {/* 2FA Code */}
@@ -607,35 +632,12 @@ export default function Hero() {
                   stroke="#4F46E5"
                   strokeWidth="2"
                   fill="none"
-                  variants={{
-                    hidden: { pathLength: 0, opacity: 0 },
-                    visible: {
-                      pathLength: 1,
-                      opacity: 1,
-                      transition: {
-                        duration: 1,
-                        delay: 1.5,
-                        repeat: Infinity,
-                        repeatDelay: 3
-                      }
-                    }
-                  }}
+                  variants={heroVariants.authFlow}
                 />
                 <motion.polygon
                   points="305,345 295,350 305,355"
                   fill="#4F46E5"
-                  variants={{
-                    hidden: { opacity: 0 },
-                    visible: {
-                      opacity: 1,
-                      transition: {
-                        duration: 0.5,
-                        delay: 1.5,
-                        repeat: Infinity,
-                        repeatDelay: 3
-                      }
-                    }
-                  }}
+                  variants={heroVariants.arrowHead}
                 />
 
                 {/* Verification */}
@@ -644,35 +646,12 @@ export default function Hero() {
                   stroke="#4338CA"
                   strokeWidth="2"
                   fill="none"
-                  variants={{
-                    hidden: { pathLength: 0, opacity: 0 },
-                    visible: {
-                      pathLength: 1,
-                      opacity: 1,
-                      transition: {
-                        duration: 1,
-                        delay: 3,
-                        repeat: Infinity,
-                        repeatDelay: 3
-                      }
-                    }
-                  }}
+                  variants={heroVariants.authFlow}
                 />
                 <motion.polygon
                   points="495,445 505,450 495,455"
                   fill="#4338CA"
-                  variants={{
-                    hidden: { opacity: 0 },
-                    visible: {
-                      opacity: 1,
-                      transition: {
-                        duration: 0.5,
-                        delay: 3,
-                        repeat: Infinity,
-                        repeatDelay: 3
-                      }
-                    }
-                  }}
+                  variants={heroVariants.arrowHead}
                 />
               </motion.g>
 
