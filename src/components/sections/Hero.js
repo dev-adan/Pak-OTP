@@ -166,9 +166,10 @@ export default function Hero() {
         pathLength: 1,
         opacity: 1,
         transition: {
-          duration: 1,
-          repeat: isSmallScreen ? 0 : Infinity,
-          repeatDelay: 3
+          duration: 2.5,
+          repeat:0 ,
+          repeatDelay: 4.5,
+          ease: "easeInOut"
         }
       }
     },
@@ -178,8 +179,9 @@ export default function Hero() {
         opacity: 1,
         transition: {
           duration: 0.5,
-          repeat: isSmallScreen ? 0 : Infinity,
-          repeatDelay: 3
+          repeat:  0,
+          repeatDelay: 4.5,
+          ease: "easeInOut"
         }
       }
     },
@@ -289,9 +291,9 @@ export default function Hero() {
 
                 {/* Login Form */}
                 <motion.g
-                  initial={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 1, x: 0 }}  
                   animate={isAnimating ? { opacity: 0, x: -180 } : { opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 1 }}
+                  transition={{ duration: 0.3, delay: 2.5 }} //login form duration
                 >
                   {/* Form Title */}
                   <text
@@ -299,7 +301,7 @@ export default function Hero() {
                     y="260"
                     textAnchor="middle"
                     fill="#312E81"
-                    fontSize="20"
+                    fontSize="17"
                     fontWeight="bold"
                   >
                     Login
@@ -322,7 +324,7 @@ export default function Hero() {
                     fill="#4338CA"
                     fontSize="14"
                   >
-                    username@email.com
+                    pakotp@pakotp.com
                   </text>
 
                   {/* Password Field */}
@@ -374,8 +376,8 @@ export default function Hero() {
                     { opacity: 0, x: 180 }
                   }
                   transition={{ 
-                    duration: 2,
-                    delay: 1.5,
+                    duration: 4,
+                    delay: 2.5, //otp form duration
                     times: [0, 0.2, 0.8, 1]
                   }}
                 >
@@ -385,7 +387,7 @@ export default function Hero() {
                     y="260"
                     textAnchor="middle"
                     fill="#312E81"
-                    fontSize="20"
+                    fontSize="18"
                     fontWeight="bold"
                   >
                     Enter OTP
@@ -408,14 +410,14 @@ export default function Hero() {
                           rx="4"
                           fill="#F3F4F6"
                           stroke="#6366F1"
-                          strokeWidth="1.5"
+                          strokeWidth="1"
                         />
                         <text
                           x={i * 26 + 11}
                           y="23"
                           textAnchor="middle"
                           fill="#312E81"
-                          fontSize="18"
+                          fontSize="15"
                           fontWeight="bold"
                         >
                           {i}
@@ -452,7 +454,7 @@ export default function Hero() {
                     { opacity: [0, 0, 1], scale: [0.8, 0.8, 1] } : 
                     { opacity: 0, scale: 0.8 }
                   }
-                  transition={{ duration: 0.5, delay: 3.5 }}
+                  transition={{ duration: 2, delay: 4.5 }}
                 >
                   {/* Success Icon Container */}
                   <motion.g transform="translate(200, 320)">
@@ -465,15 +467,22 @@ export default function Hero() {
                       opacity="0.2"
                     />
                     <motion.path
-                      d="M-25 0 L-5 20 L25 -10"
+                      d="M-15 0 L-5 15 L20 -10"
                       stroke="#059669"
-                      strokeWidth="4"
+                      strokeWidth="3"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       fill="none"
                       initial={{ pathLength: 0 }}
-                      animate={isAnimating ? { pathLength: 1 } : { pathLength: 0 }}
-                      transition={{ duration: 0.5, delay: 3.7 }}
+                      animate={isAnimating ? { 
+                        pathLength: 1,
+                        transition: {
+                          type: "spring",
+                          duration: 0.8,
+                          delay: 2.5,
+                          bounce: 0.3
+                        }
+                      } : { pathLength: 0 }}
                     />
                   </motion.g>
                   
@@ -483,7 +492,7 @@ export default function Hero() {
                     y="390"
                     textAnchor="middle"
                     fill="#047857"
-                    fontSize="20"
+                    fontSize="16"
                     fontWeight="bold"
                   >
                     Authenticated
@@ -618,12 +627,32 @@ export default function Hero() {
                   stroke="#6366F1"
                   strokeWidth="2"
                   fill="none"
-                  variants={heroVariants.authFlow}
+                  variants={{
+                    ...heroVariants.authFlow,
+                    visible: {
+                      ...heroVariants.authFlow.visible,
+                      transition: {
+                        ...heroVariants.authFlow.visible.transition,
+                        duration: 2.5,
+                        delay : 0.3, // Override only the duration
+                      }
+                    }
+                  }}
                 />
                 <motion.polygon
                   points="495,245 505,250 495,255"
                   fill="#6366F1"
-                  variants={heroVariants.arrowHead}
+                  variants={{
+                    ...heroVariants.arrowHead,
+                    visible: {
+                      ...heroVariants.arrowHead.visible,
+                      transition: {
+                        ...heroVariants.arrowHead.visible.transition,
+                        duration: 0.1,
+                        delay : 2.5, // Override only the duration
+                      }
+                    }
+                  }}
                 />
 
                 {/* 2FA Code */}
@@ -632,12 +661,32 @@ export default function Hero() {
                   stroke="#4F46E5"
                   strokeWidth="2"
                   fill="none"
-                  variants={heroVariants.authFlow}
+                  variants={{
+                    ...heroVariants.authFlow,
+                    visible: {
+                      ...heroVariants.authFlow.visible,
+                      transition: {
+                        ...heroVariants.authFlow.visible.transition,
+                        duration: 1,
+                        delay : 1.7, // Override only the duration
+                      }
+                    }
+                  }}
                 />
                 <motion.polygon
                   points="305,345 295,350 305,355"
                   fill="#4F46E5"
-                  variants={heroVariants.arrowHead}
+                  variants={{
+                    ...heroVariants.arrowHead,
+                    visible: {
+                      ...heroVariants.arrowHead.visible,
+                      transition: {
+                        ...heroVariants.arrowHead.visible.transition,
+                        duration: 0.1,
+                        delay : 3, // Override only the duration
+                      }
+                    }
+                  }}
                 />
 
                 {/* Verification */}
@@ -646,12 +695,33 @@ export default function Hero() {
                   stroke="#4338CA"
                   strokeWidth="2"
                   fill="none"
-                  variants={heroVariants.authFlow}
+                  variants={{
+                    ...heroVariants.authFlow,
+                    visible: {
+                      ...heroVariants.authFlow.visible,
+                      transition: {
+                        ...heroVariants.authFlow.visible.transition,
+                        duration: 1.3,
+                        delay : 4, // Override only the duration
+                      }
+                    }
+                  }}
                 />
+        
                 <motion.polygon
                   points="495,445 505,450 495,455"
                   fill="#4338CA"
-                  variants={heroVariants.arrowHead}
+                  variants={{
+                    ...heroVariants.arrowHead,
+                    visible: {
+                      ...heroVariants.arrowHead.visible,
+                      transition: {
+                        ...heroVariants.arrowHead.visible.transition,
+                        duration: 0.1,
+                        delay : 5, // Override only the duration
+                      }
+                    }
+                  }}
                 />
               </motion.g>
 
