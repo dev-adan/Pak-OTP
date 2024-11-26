@@ -6,8 +6,8 @@ import React from 'react';
 
 
 export default function Hero() {
-  const [isAnimating] = React.useState(true);
- 
+  const [isAnimating, setIsAnimating] = React.useState(true);
+  const [isSmallScreen, setIsSmallScreen] = React.useState(true);
 
 
   // Animation variants for main Hero component
@@ -58,30 +58,6 @@ export default function Hero() {
       }
     }
   };
-
-
-  const pathVariants = React.useMemo(() => ({
-    initial: { pathLength: 0 },
-    animate: {
-      pathLength: 1,
-      transition: {
-        type: "spring",
-        duration: 0.8,
-        delay: 2.5,
-        bounce: 0.3
-      }
-    }
-  }), []);
-
-
-  const containerStyles = React.useMemo(() => ({
-    willChange: 'transform',
-    backfaceVisibility: 'hidden',
-    WebkitBackfaceVisibility: 'hidden',
-    contain: 'paint layout',
-    transform: 'translateZ(0)',
-    transition: 'transform 0.3s ease-out'
-  }), []);
 
   return (
     <div className="relative bg-white overflow-hidden">
@@ -138,23 +114,17 @@ export default function Hero() {
       </div>
       <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/80" />
-        <div className="h-[360px] w-full sm:h-[500px] md:h-[600px] lg:w-full lg:h-full relative overflow-hidden" style={containerStyles}>
+        <div className="h-[360px] w-full sm:h-[500px] md:h-[600px] lg:w-full lg:h-full relative overflow-hidden">
           <div className="h-full w-full flex items-center justify-center">
             <motion.svg
               width="100%"
               height="100%"
-              viewBox={"0 0 800 750"}
+              viewBox={isSmallScreen ? "0 0 800 800" : "0 0 800 700"}
               initial="hidden"
               animate="visible"
               variants={heroVariants.svg}
               className="w-full max-w-3xl sm:max-w-4xl md:max-w-5xl lg:max-w-6xl transform scale-125"
-              style={{ 
-                willChange: 'transform',
-                backfaceVisibility: 'hidden',
-                WebkitBackfaceVisibility: 'hidden',
-                contain: 'paint layout'
-              }}
-              vectorEffect="non-scaling-stroke"
+              style={{ willChange: 'transform' }}
             >
               {/* User Device */}
               <motion.g
@@ -360,7 +330,7 @@ export default function Hero() {
                       fill="#34D399"
                       opacity="0.2"
                     />
-                    {/* <motion.path
+                    <motion.path
                       d="M-15 0 L-5 15 L20 -10"
                       stroke="#059669"
                       strokeWidth="3"
@@ -377,23 +347,7 @@ export default function Hero() {
                           bounce: 0.3
                         }
                       } : { pathLength: 0 }}
-                    /> */}
-
-
-                    
-<motion.path
-  d="M-15 0 L-5 15 L20 -10"
-  stroke="#059669"
-  strokeWidth="3"
-  strokeLinecap="round"
-  strokeLinejoin="round"
-  fill="none"
-  variants={pathVariants}
-  initial="initial"
-  animate={isAnimating ? "animate" : "initial"}
-/>
-
-
+                    />
                   </motion.g>
 
                   {/* Success Text */}
@@ -647,7 +601,7 @@ export default function Hero() {
               >
                 <text x="150" y="180" fill="#4F46E5" fontSize="14" fontWeight="500">User Device</text>
                 <text x="550" y="180" fill="#4F46E5" fontSize="14" fontWeight="500">Auth Server</text>
-                <text x="350" y="230" fill="#6366F1" fontSize="11">1. Login Request</text>
+                <text x="350" y="230" fill="#6366F1" fontSize="12">1. Login Request</text>
                 <text x="350" y="330" fill="#4F46E5" fontSize="12">2. 2FA Code</text>
                 <text x="350" y="430" fill="#4338CA" fontSize="12">3. Verification</text>
               </motion.g>
