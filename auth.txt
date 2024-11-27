@@ -1,9 +1,9 @@
-# Authentication Implementation Documentation
+# Next.js Authentication System Tutorial
 
-## Overview
-This document details the implementation of authentication in the Pak OTP Restored application using NextAuth.js with MongoDB as the database. The system provides secure user authentication, registration, and role-based access control.
+## Introduction
+This tutorial explains how to implement a complete authentication system in Next.js using NextAuth.js, MongoDB, and Google OAuth. We'll build a system that supports both email/password and Google sign-in methods.
 
-## File Structure
+## Project Structure
 ```
 src/
 ├── app/
@@ -23,18 +23,83 @@ src/
     └── User.js               # User model schema
 ```
 
-## Environment Variables (.env.local)
-```
+## 1. Environment Setup
+
+First, create a `.env.local` file in your project root:
+
+```env
+# MongoDB Connection
 MONGODB_URI=mongodb://localhost:27017/pak_otp_db
+
+# NextAuth Configuration
 NEXTAUTH_SECRET="k+jg/bPZz8tBeWRIMtnDsStGvfGdGayFHPYTYK7ehJs="
 NEXTAUTH_URL=http://localhost:3000
+
+# Google OAuth Credentials
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 ```
 
-## Key Components
+### Understanding Environment Variables:
+- MONGODB_URI: Your MongoDB connection string
+- NEXTAUTH_SECRET: A secret key for JWT encryption (generate using `openssl rand -base64 32`)
+- NEXTAUTH_URL: Your application's base URL
+- GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET: Obtained from Google Cloud Console
 
-### 1. User Model (src/models/User.js)
+## 2. Database Connection (src/lib/mongodb.js)
+
+```javascript
+import mongoose from 'mongoose';
+
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+}
+
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectDB() {
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      return mongoose;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
+}
+
+export default connectDB;
+```
+
+### Code Explanation:
+1. We import mongoose for MongoDB interaction
+2. We implement connection caching to prevent multiple connections
+3. The connection is reused if it exists, improving performance
+4. Error handling ensures robust database connectivity
+5. Connection options are configured for optimal performance
+
+## 3. User Model (src/models/User.js)
+
 ```javascript
 import mongoose from 'mongoose';
 
@@ -53,29 +118,36 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide a password'],
     minlength: [6, 'Password should be at least 6 characters long'],
-    select: false,
+    select: false, // Don't include password in queries by default
   },
   role: {
     type: String,
     enum: ['user', 'admin'],
     default: 'user',
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
 }, {
-  timestamps: true,
+  timestamps: true, // Adds createdAt and updatedAt fields
 });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);
 ```
 
-### 2. NextAuth Configuration (src/app/api/auth/[...nextauth]/route.js)
+### Schema Explanation:
+1. name: Required string field for user's name
+2. email: 
+   - Required and unique
+   - Includes regex validation for email format
+   - Must be unique in the database
+3. password:
+   - Minimum 6 characters
+   - select: false prevents password from being returned in queries
+4. role:
+   - Enum field for user roles
+   - Defaults to 'user'
+5. timestamps: Automatically manages createdAt and updatedAt fields
+
+## 4. NextAuth Configuration (src/app/api/auth/[...nextauth]/route.js)
+
 ```javascript
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
@@ -86,10 +158,13 @@ import User from '@/models/User';
 
 const authOptions = {
   providers: [
+    // 1. Google Provider Configuration
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
+    
+    // 2. Credentials Provider Configuration
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -103,18 +178,21 @@ const authOptions = {
 
         await connectDB();
         
+        // Find user and include password field
         const user = await User.findOne({ email: credentials.email }).select('+password');
         
         if (!user) {
           throw new Error('No user found with this email');
         }
 
+        // Verify password
         const isPasswordMatch = await bcrypt.compare(credentials.password, user.password);
 
         if (!isPasswordMatch) {
           throw new Error('Invalid password');
         }
 
+        // Return user without password
         return {
           id: user._id.toString(),
           name: user.name,
@@ -124,13 +202,17 @@ const authOptions = {
       }
     })
   ],
+
+  // 3. Callbacks Configuration
   callbacks: {
+    // Extend JWT with user role
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
       }
       return token;
     },
+    // Add role to session
     async session({ session, token }) {
       if (session?.user) {
         session.user.role = token.role;
@@ -138,13 +220,19 @@ const authOptions = {
       return session;
     }
   },
+
+  // 4. Pages Configuration
   pages: {
-    signIn: '/',
+    signIn: '/', // Use home page for sign in
   },
+
+  // 5. Session Configuration
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+
+  // 6. JWT Configuration
   secret: process.env.NEXTAUTH_SECRET,
 };
 
@@ -152,7 +240,31 @@ const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 ```
 
-### 3. Registration API (src/app/api/auth/register/route.js)
+### NextAuth Configuration Breakdown:
+
+1. **Providers Setup**:
+   - GoogleProvider: Handles Google OAuth authentication
+   - CredentialsProvider: Handles email/password authentication
+
+2. **Authorize Function**:
+   - Validates credentials
+   - Connects to database
+   - Finds user by email
+   - Verifies password using bcrypt
+   - Returns user data without password
+
+3. **Callbacks**:
+   - jwt: Extends JWT token with user role
+   - session: Adds role to session data
+
+4. **Security Features**:
+   - JWT-based sessions
+   - 30-day session lifetime
+   - Secure password comparison
+   - Error handling
+
+## 5. Registration API (src/app/api/auth/register/route.js)
+
 ```javascript
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
@@ -161,6 +273,7 @@ import User from '@/models/User';
 
 export async function POST(req) {
   try {
+    // 1. Extract and validate input
     const { name, email, password } = await req.json();
 
     if (!name || !email || !password) {
@@ -170,8 +283,10 @@ export async function POST(req) {
       );
     }
 
+    // 2. Connect to database
     await connectDB();
 
+    // 3. Check for existing user
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
@@ -180,20 +295,24 @@ export async function POST(req) {
       );
     }
 
+    // 4. Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // 5. Create user
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
     });
 
+    // 6. Prepare response (exclude password)
     const userWithoutPassword = {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
     };
 
+    // 7. Return success response
     return NextResponse.json(
       { message: 'User created successfully', user: userWithoutPassword },
       { status: 201 }
@@ -208,72 +327,150 @@ export async function POST(req) {
 }
 ```
 
-### 4. Authentication Modal (src/components/auth/LoginModal.js)
-The LoginModal component provides a unified interface for:
-- Email/Password Sign In
-- Google OAuth Sign In
-- User Registration
-- Password Reset (UI prepared for future implementation)
+### Registration API Breakdown:
 
-Key features:
-- Form validation
-- Error handling
-- Loading states
-- Responsive design
-- Automatic sign-in after registration
+1. **Input Validation**:
+   - Extracts data from request body
+   - Validates required fields
+   - Returns 400 if validation fails
 
-## Authentication Flow
+2. **User Creation Process**:
+   - Connects to database
+   - Checks for existing user
+   - Hashes password securely
+   - Creates new user record
+   - Returns sanitized user data
 
-1. **Credential Authentication**:
-   - User enters email/password
-   - Credentials are validated
-   - Password is compared with hashed password in database
-   - JWT token is generated and stored in session
-   - User is redirected to dashboard
+3. **Security Measures**:
+   - Password hashing with bcrypt
+   - Input validation
+   - Error handling
+   - Safe response formatting
 
-2. **Google Authentication**:
-   - User clicks "Continue with Google"
-   - Google OAuth flow is initiated
-   - User selects Google account
-   - Account data is received and processed
-   - User is created/updated in database
-   - JWT token is generated and stored in session
-   - User is redirected to dashboard
+## 6. Authentication Modal (LoginModal.js)
 
-3. **Registration**:
-   - User fills registration form
-   - Data is validated
-   - Password is hashed
-   - User is created in database
-   - Automatic sign-in is performed
-   - User is redirected to dashboard
+The LoginModal component provides a unified interface for all authentication methods. Key features:
 
-## Security Features
+1. **State Management**:
+```javascript
+const [isLogin, setIsLogin] = useState(true);
+const [formData, setFormData] = useState({
+  name: '',
+  email: '',
+  password: '',
+});
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState('');
+```
+
+2. **Form Handling**:
+```javascript
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+
+  try {
+    if (isLogin) {
+      // Handle Sign In
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        router.push('/dashboard');
+        router.refresh();
+        onClose();
+      }
+    } else {
+      // Handle Sign Up
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Something went wrong');
+      }
+
+      // Auto sign in after registration
+      const signInResult = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (signInResult?.error) {
+        setError(signInResult.error);
+      } else {
+        router.push('/dashboard');
+        router.refresh();
+        onClose();
+      }
+    }
+  } catch (err) {
+    setError(err.message || 'An error occurred');
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+### Modal Features:
+
+1. **Form States**:
+   - Login/Register toggle
+   - Loading states
+   - Error handling
+   - Input validation
+
+2. **Authentication Methods**:
+   - Email/Password sign in
+   - Google OAuth sign in
+   - User registration
+   - Automatic sign-in after registration
+
+3. **UI Components**:
+   - Form inputs with validation
+   - Loading indicators
+   - Error messages
+   - Social login buttons
+
+## Security Best Practices
 
 1. **Password Security**:
-   - Passwords are hashed using bcrypt (12 rounds)
-   - Passwords are never stored in plain text
-   - Password field is excluded from general queries
+   - Bcrypt hashing (12 rounds)
+   - Password field excluded from queries
+   - Minimum length requirement
 
 2. **Session Security**:
    - JWT-based sessions
-   - 30-day session lifetime
+   - 30-day expiration
    - Secure session storage
    - CSRF protection
 
 3. **API Security**:
    - Input validation
    - Error handling
-   - Rate limiting (to be implemented)
+   - Rate limiting (recommended)
    - CORS protection
 
 ## Google OAuth Setup
 
-1. Redirect URIs:
-   - Development: http://localhost:3000/api/auth/callback/google
-   - Production: https://your-domain.com/api/auth/callback/google
+1. **Redirect URIs Configuration**:
+   ```
+   Development: http://localhost:3000/api/auth/callback/google
+   Production: https://your-domain.com/api/auth/callback/google
+   ```
 
-2. Required Scopes:
+2. **Required Scopes**:
    - email
    - profile
 
@@ -289,268 +486,59 @@ Key features:
 }
 ```
 
-## File Structure and Implementation Details
+## Testing the Authentication System
 
-### 1. Database Configuration
-**File:** `src/lib/mongodb.js`
-- Implements MongoDB connection with connection pooling
-- Uses mongoose for schema management
-- Implements caching to prevent multiple connections
-- Key features:
-  ```javascript
-  const MONGODB_URI = process.env.MONGODB_URI;
-  cached.promise = mongoose.connect(MONGODB_URI, {
-    bufferCommands: false,
-  });
-  ```
+1. **Start the Development Server**:
+   ```bash
+   npm run dev
+   ```
 
-### 2. User Model
-**File:** `src/models/User.js`
-- Mongoose schema for user data
-- Fields:
-  ```javascript
-  {
-    name: String (required),
-    email: String (required, unique),
-    password: String (required, min: 6 chars),
-    role: String (enum: ['user', 'admin']),
-    timestamps: true
-  }
-  ```
-- Password field is excluded from queries by default
+2. **Test Registration**:
+   - Click "Sign up"
+   - Fill in name, email, and password
+   - Submit form
+   - Should automatically sign in and redirect to dashboard
 
-### 3. NextAuth Configuration
-**File:** `src/app/api/auth/[...nextauth]/route.js`
-- Configures NextAuth.js with credentials provider
-- Implements JWT strategy
-- Session configuration:
-  ```javascript
-  {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60 // 30 days
-  }
-  ```
-- Custom callbacks for JWT and session handling
+3. **Test Sign In**:
+   - Click "Sign in"
+   - Enter email and password
+   - Should redirect to dashboard
 
-### 4. Registration API
-**File:** `src/app/api/auth/register/route.js`
-- Handles user registration
-- Features:
-  - Password hashing with bcrypt (12 rounds)
-  - Email uniqueness validation
-  - Input validation
-  - Secure response handling (password excluded)
-- Example usage:
-  ```javascript
-  POST /api/auth/register
-  Body: {
-    name: string,
-    email: string,
-    password: string
-  }
-  ```
+4. **Test Google Sign In**:
+   - Click "Continue with Google"
+   - Select Google account
+   - Should redirect to dashboard
 
-### 5. Authentication Pages
+## Troubleshooting
 
-#### Sign In Page
-**File:** `src/app/auth/signin/page.js`
-- Features:
-  - Email/password form
-  - Error handling
-  - Redirect handling
-  - Loading states
-  - Remember me functionality
-- Styling:
-  - Modern glassmorphism design
-  - Responsive layout
-  - Interactive animations
+1. **Database Connection Issues**:
+   - Verify MONGODB_URI in .env.local
+   - Ensure MongoDB is running
+   - Check connection logs
 
-#### Registration Page
-**File:** `src/app/auth/register/page.js`
-- Features:
-  - Full registration form
-  - Password confirmation
-  - Automatic sign-in after registration
-  - Client-side validation
-  - Server error handling
+2. **Google OAuth Issues**:
+   - Verify credentials in Google Cloud Console
+   - Check redirect URI configuration
+   - Ensure scopes are properly set
 
-#### Error Page
-**File:** `src/app/auth/error/page.js`
-- Handles authentication errors
-- Custom error messages for different scenarios
-- Clean error presentation
-
-### 6. Middleware Protection
-**File:** `src/middleware.js`
-- Protects routes based on authentication status
-- Implements role-based access control
-- Protected paths:
-  ```javascript
-  matcher: [
-    '/dashboard/:path*',
-    '/admin/:path*',
-    '/auth/:path*'
-  ]
-  ```
-- Handles redirects for unauthenticated users:
-  ```javascript
-  // Redirect to home with login modal trigger
-  if (isProtectedRoute(pathname) && !isAuth) {
-    const url = new URL('/', req.url);
-    url.searchParams.set('showLogin', 'true');
-    return NextResponse.redirect(url);
-  }
-  ```
-
-### 7. Authentication Provider and Modal Integration
-**File:** `src/app/providers.js`
-- Wraps application with SessionProvider
-- Enables session management throughout the app
-
-**File:** `src/components/layout/Navbar.js`
-- Handles authentication state UI
-- Features:
-  ```javascript
-  const { data: session } = useSession();
-  // Show different buttons based on auth state
-  {session ? (
-    <>
-      <Link href="/dashboard">Dashboard</Link>
-      <button onClick={() => signOut()}>Logout</button>
-    </>
-  ) : (
-    <button onClick={onLoginClick}>Login</button>
-  )}
-  ```
-
-**File:** `src/app/page.js`
-- Manages login modal state
-- Handles URL parameters for automatic modal trigger:
-  ```javascript
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (searchParams.get('showLogin') === 'true') {
-      setIsLoginModalOpen(true);
-      window.history.replaceState({}, '', '/');
-    }
-  }, [searchParams]);
-  ```
-
-### 8. Root Layout Integration
-**File:** `src/app/layout.js`
-- Integrates authentication provider
-- Maintains session state across the application
-
-### 9. Environment Configuration
-**File:** `.env.local`
-```env
-MONGODB_URI=mongodb://localhost:27017/pak_otp_db
-NEXTAUTH_SECRET=your_secure_secret
-NEXTAUTH_URL=http://localhost:3000
-```
-
-## Authentication Flow
-
-1. Protected Route Access:
-   - User attempts to access protected route (e.g., /dashboard)
-   - Middleware checks authentication status
-   - If not authenticated:
-     - Redirects to home page
-     - Adds `showLogin=true` parameter
-     - Login modal automatically opens
-
-2. Login Process:
-   - User enters credentials in modal
-   - Credentials verified through NextAuth
-   - On success:
-     - Session created
-     - User redirected to original destination
-   - On failure:
-     - Error displayed in modal
-     - User remains on current page
-
-3. Dashboard Access:
-   - After successful login:
-     - Navbar updates to show Dashboard and Logout
-     - User can access protected routes
-     - Session maintained for 30 days
-
-4. Logout Process:
-   - User clicks logout
-   - Session destroyed
-   - UI updates to show login button
-   - Protected routes become inaccessible
-
-## Security Features
-
-1. Password Security:
-   - Bcrypt hashing (12 rounds)
-   - Password confirmation on registration
-   - Minimum length requirement
-   - Secure storage practices
-
-2. Session Security:
-   - JWT-based sessions
-   - 30-day session lifetime
-   - Secure cookie handling
-   - CSRF protection
-
-3. Route Protection:
-   - Middleware-based protection
-   - Role-based access control
-   - Secure redirects
-   - Protected API routes
-
-4. Data Security:
-   - MongoDB connection pooling
-   - Input validation
-   - XSS protection
-   - Secure headers
-
-## Best Practices Implemented
-
-1. Code Organization:
-   - Modular components
-   - Clear file structure
-   - Separation of concerns
-   - Type safety
-
-2. User Experience:
-   - Seamless authentication flow
-   - Persistent sessions
-   - Clear error messages
-   - Responsive design
-
-3. Security:
-   - No sensitive data exposure
-   - Secure password handling
-   - Protected routes
-   - Safe redirects
-
-4. Performance:
-   - Optimized database connections
-   - Client-side state management
-   - Efficient routing
-   - Minimal redirects
+3. **Authentication Errors**:
+   - Check browser console for errors
+   - Verify environment variables
+   - Check NextAuth configuration
 
 ## Future Enhancements
 
-1. Authentication Features:
-   - Two-factor authentication
-   - Social login providers
+1. **Security**:
+   - Implement rate limiting
+   - Add two-factor authentication
+   - Enhanced password requirements
+
+2. **Features**:
    - Password reset functionality
    - Email verification
+   - Session management UI
 
-2. Security Improvements:
-   - Rate limiting
-   - Enhanced logging
-   - Security headers
-   - Session management
-
-3. User Experience:
+3. **User Experience**:
    - Remember me functionality
    - Progressive form validation
-   - Better error handling
-   - Loading states
+   - Social login expansion
