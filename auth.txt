@@ -443,6 +443,105 @@ const handleSubmit = async (e) => {
    - Error messages
    - Social login buttons
 
+## Common Issues and Solutions
+
+### 1. useSearchParams() Suspense Boundary Error
+
+#### Error Message
+```
+⨯ useSearchParams() should be wrapped in a suspense boundary at page "/". 
+Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+```
+
+#### Cause
+This error occurs in Next.js 13+ when using `useSearchParams` hook without proper Suspense boundaries. The issue arises because:
+- `useSearchParams` is a client-side hook that requires suspense
+- It can cause hydration mismatches if not properly handled
+- Next.js requires certain client-side hooks to be wrapped in Suspense boundaries
+
+#### Solution
+1. **Create a Separate Client Component**
+```javascript
+// src/components/auth/LoginHandler.js
+'use client';
+
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+export default function LoginHandler() {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('showLogin') === 'true') {
+      window.dispatchEvent(new CustomEvent('openLoginModal'));
+      window.history.replaceState({}, '', '/');
+    }
+  }, [searchParams]);
+
+  return null;
+}
+```
+
+2. **Wrap in Suspense in Main Page**
+```javascript
+// src/app/page.js
+import { Suspense } from 'react';
+import LoginHandler from '@/components/auth/LoginHandler';
+
+export default function Home() {
+  return (
+    <div>
+      <Suspense fallback={null}>
+        <LoginHandler />
+      </Suspense>
+      {/* Rest of your page content */}
+    </div>
+  );
+}
+```
+
+3. **Use Event-Based Communication**
+```javascript
+// Event listener setup
+useEffect(() => {
+  window.addEventListener('openLoginModal', () => setIsLoginModalOpen(true));
+  return () => window.removeEventListener('openLoginModal', 
+    () => setIsLoginModalOpen(true));
+}, []);
+```
+
+#### Benefits of This Solution
+1. **Better Code Organization**
+   - Separates concerns into dedicated components
+   - Makes the code more maintainable
+   - Improves reusability
+
+2. **Improved Performance**
+   - Reduces client-side JavaScript bundle
+   - Better code splitting
+   - Optimized hydration
+
+3. **Enhanced Reliability**
+   - Prevents hydration mismatches
+   - More predictable behavior
+   - Better error handling
+
+### Best Practices for Client-Side Hooks
+1. **Component Separation**
+   - Keep client-side logic in dedicated components
+   - Use the 'use client' directive appropriately
+   - Minimize the use of client-side hooks in pages
+
+2. **Suspense Usage**
+   - Always wrap dynamic imports in Suspense
+   - Provide meaningful fallback UI
+   - Consider loading states
+
+3. **State Management**
+   - Use event-based communication for cross-component state
+   - Implement proper cleanup in useEffect
+   - Handle edge cases and errors
+
 ## Security Best Practices
 
 1. **Password Security**:

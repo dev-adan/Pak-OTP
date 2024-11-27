@@ -1,15 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { motion } from 'framer-motion';
 
 export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   // Handle screen resize
   useEffect(() => {
@@ -136,7 +139,7 @@ export default function DashboardLayout({ children }) {
                     className={`w-6 h-6 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`} 
                   />
                   {(isSidebarOpen || isMobileView) && (
-                    <span className={`ml-3 font-medium transition-opacity duration-200`}>
+                    <span className={`ml-3 font-medium`}>
                       {item.name}
                     </span>
                   )}
@@ -145,25 +148,66 @@ export default function DashboardLayout({ children }) {
             })}
           </nav>
 
-          {/* User Profile Section */}
-          <div className="p-4 border-t border-gray-100">
-            <div className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center px-2' : 'px-3 space-x-3'} py-3 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer`}
+          {/* Profile Section */}
+          <div className={`relative border-t border-gray-100 p-4 ${!isSidebarOpen && !isMobileView ? 'px-2' : 'px-3'}`}>
+            <div 
+              className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center' : 'justify-between'} cursor-pointer`}
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
-              <Icon icon="solar:user-circle-bold-duotone" className="w-6 h-6 text-gray-500 flex-shrink-0" />
+              <div className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center' : 'space-x-3'}`}>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold text-lg">
+                  {session?.user?.name?.[0]?.toUpperCase() || 'U'}
+                </div>
+                {(isSidebarOpen || isMobileView) && (
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900">{session?.user?.name || 'User'}</h3>
+                    <p className="text-sm text-gray-500">{session?.user?.email}</p>
+                  </div>
+                )}
+              </div>
               {(isSidebarOpen || isMobileView) && (
-                <span className="font-medium text-gray-600">Profile</span>
+                <Icon 
+                  icon={isProfileOpen ? "solar:alt-arrow-up-bold-duotone" : "solar:alt-arrow-down-bold-duotone"} 
+                  className="w-5 h-5 text-gray-500"
+                />
               )}
             </div>
+
+            {/* Dropdown Menu */}
+            <AnimatePresence>
+              {isProfileOpen && (isSidebarOpen || isMobileView) && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute bottom-full left-0 w-full p-3"
+                >
+                  <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                    <Link
+                      href="/dashboard/settings"
+                      className="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      <Icon icon="solar:settings-bold-duotone" className="w-5 h-5" />
+                      <span>Settings</span>
+                    </Link>
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/' })}
+                      className="w-full flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <Icon icon="solar:logout-3-bold-duotone" className="w-5 h-5" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </motion.aside>
 
-      {/* Main content */}
-      <main className={`transition-all duration-300 ${
-        isMobileView 
-          ? 'ml-0' 
-          : (isSidebarOpen ? 'ml-[280px]' : 'ml-20')
-      }`}>
+      {/* Main Content */}
+      <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:ml-[280px]' : 'lg:ml-20'}`}>
         {children}
       </main>
     </div>
