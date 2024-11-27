@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import Hero from '../components/sections/Hero';
@@ -9,9 +10,20 @@ import { motion } from 'framer-motion';
 import Pricing from '@/components/sections/Pricing';
 import Documentation from '@/components/sections/Documentation';
 import ContactUs from '@/components/sections/ContactUs';
+import LoginModal from '@/components/auth/LoginModal';
 
 export default function Home() {
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+
   useEffect(() => {
+    // Check for showLogin parameter and open modal if present
+    if (searchParams.get('showLogin') === 'true') {
+      setIsLoginModalOpen(true);
+      // Remove the showLogin parameter from the URL without refreshing the page
+      window.history.replaceState({}, '', '/');
+    }
+
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
@@ -21,11 +33,11 @@ export default function Home() {
         });
       });
     });
-  }, []);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <Navbar onLoginClick={() => setIsLoginModalOpen(true)} />
       
       {/* Main content with scroll animations */}
       <motion.div
@@ -78,6 +90,12 @@ export default function Home() {
       </motion.div>
 
       <Footer />
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
     </div>
   );
 }

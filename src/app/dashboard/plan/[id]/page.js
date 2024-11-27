@@ -343,7 +343,7 @@ export default function PlanDetails({ params }) {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm border border-gray-100 relative overflow-hidden"
+              className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] backdrop-blur-lg border border-gray-100/80 hover:shadow-[0_8px_40px_rgb(0,0,0,0.09)] transition-shadow duration-300"
             >
               {/* Decorative Background */}
               <div className="absolute inset-0">
@@ -471,7 +471,7 @@ export default function PlanDetails({ params }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm border border-gray-100"
+              className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] backdrop-blur-lg border border-gray-100/80 hover:shadow-[0_8px_40px_rgb(0,0,0,0.09)] transition-shadow duration-300"
             >
               <div className="relative">
                 {/* Header Section */}
