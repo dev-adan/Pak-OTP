@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }) {
       <motion.aside 
         initial={false}
         animate={{ 
-          x: isSidebarOpen ? 0 : (isMobileView ? -280 : -64),
+          x: isSidebarOpen ? 0 : (isMobileView ? -280 : 0),
           width: isMobileView ? 280 : (isSidebarOpen ? 280 : 80)
         }}
         transition={{ type: "spring", bounce: 0, duration: 0.3 }}
@@ -83,7 +83,7 @@ export default function DashboardLayout({ children }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-4">
-            <Link href="/" className="flex items-center space-x-3">
+            <Link href="/" className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center w-full' : 'space-x-3'}`}>
               <div className="w-10 h-10 relative flex-shrink-0">
                 <svg viewBox="0 0 100 100" className="w-full h-full">
                   <path
@@ -106,7 +106,7 @@ export default function DashboardLayout({ children }) {
             {!isMobileView && (
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${!isSidebarOpen ? 'absolute right-0 ml-4' : ''}`}
                 aria-label={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
               >
                 <Icon 
@@ -118,14 +118,14 @@ export default function DashboardLayout({ children }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <nav className={`flex-1 ${!isSidebarOpen && !isMobileView ? 'px-2' : 'px-3'} py-4 space-y-1 overflow-y-auto`}>
             {menuItems.map((item) => {
               const isActive = pathname === item.path;
               return (
                 <Link
                   key={item.name}
                   href={item.path}
-                  className={`flex items-center px-3 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center px-2' : 'px-3'} py-3 rounded-lg transition-colors ${
                     isActive
                       ? 'bg-indigo-50 text-indigo-600'
                       : 'text-gray-700 hover:bg-gray-100'
@@ -147,8 +147,7 @@ export default function DashboardLayout({ children }) {
 
           {/* User Profile Section */}
           <div className="p-4 border-t border-gray-100">
-            <div className={`flex items-center space-x-3 px-3 py-3 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer
-              ${isSidebarOpen || isMobileView ? 'justify-start' : 'justify-center'}`}
+            <div className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center px-2' : 'px-3 space-x-3'} py-3 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer`}
             >
               <Icon icon="solar:user-circle-bold-duotone" className="w-6 h-6 text-gray-500 flex-shrink-0" />
               {(isSidebarOpen || isMobileView) && (
