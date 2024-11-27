@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 
 const mockData = {
   id: "PAK-OTP-PK1120212",
+  name: "Professional Plan",
   usageLimit: 5000,
   usageCount: 4500,
   endDate: "2024-12-31",
@@ -36,123 +37,179 @@ export default function PlanDetails({ params }) {
     <div className="min-h-screen bg-[#f8fafc] p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
         {/* Page Header */}
-        <div className="relative mb-6 sm:mb-8 md:mb-10">
-          {/* Background Glow */}
-          <div className="absolute -inset-8 bg-gradient-to-br from-violet-600/5 via-purple-600/5 to-teal-500/5 rounded-2xl backdrop-blur-3xl" />
-          <div className="absolute -inset-8 bg-gradient-to-tr from-violet-600/3 via-transparent to-teal-500/3 rounded-2xl" />
-          <div className="absolute -top-10 left-0 w-72 h-72 bg-violet-600/10 rounded-full blur-3xl opacity-30" />
-          <div className="absolute -top-10 left-20 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl opacity-30" />
-
+        <div className="relative mb-6">
+          {/* Animated background gradients */}
+          <div className="absolute -inset-10 bg-gradient-to-br from-violet-600/30 to-teal-500/30 rounded-[2.5rem] blur-3xl opacity-20" />
+          <div className="absolute -inset-10 bg-gradient-to-tr from-purple-600/20 to-violet-500/20 rounded-[2.5rem] blur-2xl opacity-20" />
+          
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative flex flex-col items-start p-4 sm:p-6"
+            className="relative"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-3 sm:gap-4">
-              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: "2rem" }}
-                  transition={{ delay: 0.2, duration: 0.4 }}
-                  className="w-1 rounded-full bg-gradient-to-b from-violet-600 via-purple-600 to-teal-500"
-                />
-                <motion.h1
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="relative text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight group"
-                >
-                  <span className="relative inline-block">
-                    <span className="relative z-10 bg-gradient-to-r from-violet-600 via-purple-600 to-teal-500 bg-clip-text text-transparent">
-                      Plan Details
-                    </span>
-                    <motion.div
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: 1 }}
-                      transition={{ delay: 0.5, duration: 0.6 }}
-                      className="absolute -bottom-0.5 sm:-bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-600/80 via-purple-600/80 to-teal-500/80 transform origin-left"
-                    />
-                    <div className="absolute -z-10 top-1/2 -translate-y-1/2 left-0 right-0 h-[120%] w-full">
-                      <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 via-purple-600/5 to-teal-500/5 blur-xl" />
-                      <motion.div
-                        animate={{
-                          opacity: [0.3, 0.5, 0.3],
-                          scale: [1, 1.05, 1]
-                        }}
-                        transition={{
-                          duration: 3,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                        className="absolute inset-0 bg-gradient-to-r from-violet-600/3 via-purple-600/3 to-teal-500/3 blur-lg"
-                      />
-                    </div>
-                  </span>
-                </motion.h1>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="ml-2 sm:ml-4 px-2 sm:px-3 py-1 rounded-full bg-gradient-to-r from-violet-600/10 to-teal-500/10"
-                >
-                  <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-teal-500 bg-clip-text text-transparent">
-                    Professional Plan
-                  </span>
-                </motion.div>
-              </div>
-
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.02, boxShadow: "0 10px 20px -10px rgba(124, 58, 237, 0.3)" }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ delay: 0.5 }}
-                className="w-full sm:w-auto px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-violet-600 via-purple-600 to-teal-500 text-white rounded-xl font-medium flex items-center justify-center sm:justify-start gap-2 hover:from-violet-700 hover:via-purple-700 hover:to-teal-600 transition-all shadow-lg shadow-violet-600/20 text-sm sm:text-base"
-              >
-                <Icon icon="solar:pen-bold" className="w-4 h-4" />
-                Update Plan
-              </motion.button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 md:gap-8 pl-0 sm:pl-4 w-full mt-3 sm:mt-0">
+            {/* Main card with glass effect */}
+            <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] overflow-hidden">
+              {/* Animated gradient overlay */}
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 md:gap-6 w-full"
-              >
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-violet-600/10 to-teal-500/10">
-                        <Icon icon="solar:settings-bold" className="w-5 h-5 text-violet-600" />
+                animate={{
+                  backgroundPosition: ['0% 0%', '100% 100%'],
+                  opacity: [0.1, 0.15, 0.1],
+                }}
+                transition={{
+                  duration: 10,
+                  repeat: Infinity,
+                  repeatType: 'reverse',
+                }}
+                className="absolute inset-0 bg-gradient-to-br from-violet-600/10 via-transparent to-teal-500/10 bg-[length:200%_200%]"
+              />
+              
+              {/* Floating orbs */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.5, 0.3],
+                  x: [0, 10, 0],
+                  y: [0, -10, 0],
+                }}
+                transition={{
+                  duration: 8,
+                  repeat: Infinity,
+                  repeatType: 'reverse',
+                }}
+                className="absolute -right-8 -top-8 w-32 h-32 bg-violet-600/30 rounded-full blur-2xl"
+              />
+              <motion.div
+                animate={{
+                  scale: [1, 1.1, 1],
+                  opacity: [0.2, 0.4, 0.2],
+                  x: [0, -10, 0],
+                  y: [0, 10, 0],
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Infinity,
+                  repeatType: 'reverse',
+                }}
+                className="absolute -left-8 -bottom-8 w-32 h-32 bg-teal-500/30 rounded-full blur-2xl"
+              />
+
+              {/* Content container */}
+              <div className="relative p-6 sm:p-8 md:p-10">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                  {/* Left section with title */}
+                  <div className="flex items-center gap-5">
+                    <motion.div
+                      whileHover={{ scale: 1.05, rotate: 5 }}
+                      className="relative group"
+                    >
+                      <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-teal-500 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-200" />
+                      <div className="relative p-4 bg-gradient-to-br from-violet-600 via-purple-600 to-teal-500 rounded-xl shadow-lg shadow-violet-600/20">
+                        <Icon icon="solar:widget-bold" className="w-7 h-7 text-white drop-shadow-lg" />
                       </div>
-                      <p className="text-base text-gray-600">
-                        Manage your plan settings and API keys
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-violet-600/10 to-teal-500/10">
-                        <Icon icon="solar:calendar-bold" className="w-5 h-5 text-teal-600" />
-                      </div>
-                      <p className="text-base text-gray-600">
-                        Valid until {new Date(plan.endDate).toLocaleDateString()}
-                      </p>
+                    </motion.div>
+                    
+                    <div className="space-y-1">
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">
+                          <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-teal-500 bg-clip-text text-transparent drop-shadow">
+                            {plan.name}
+                          </span>
+                        </h1>
+                      </motion.div>
+                      <motion.p
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-gray-500 text-sm sm:text-base"
+                      >
+                        Manage your enterprise plan settings and usage
+                      </motion.p>
                     </div>
                   </div>
+
+                  {/* Right section with status */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="flex items-center gap-4"
+                  >
+                    <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-violet-600/10 via-purple-600/10 to-teal-500/10 rounded-xl backdrop-blur-sm border border-white/20">
+                      <motion.div
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [0.5, 1, 0.5],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          repeatType: 'reverse',
+                        }}
+                        className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-violet-600 to-teal-500"
+                      />
+                      <span className="text-sm font-medium bg-gradient-to-r from-violet-600 to-teal-500 bg-clip-text text-transparent">
+                        Active Plan
+                      </span>
+                    </div>
+
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-teal-500 text-white rounded-xl font-medium shadow-lg shadow-violet-600/20 hover:shadow-xl hover:shadow-violet-600/30 transition-all duration-200"
+                    >
+                      <Icon icon="solar:pen-bold" className="w-4 h-4" />
+                      <span>Upgrade</span>
+                    </motion.button>
+                  </motion.div>
                 </div>
-              </motion.div>
+
+                {/* Bottom stats section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4"
+                >
+                  {[
+                    {
+                      icon: "solar:calendar-bold",
+                      label: "Valid Until",
+                      value: new Date(plan.endDate).toLocaleDateString(),
+                      color: "text-violet-600"
+                    },
+                    {
+                      icon: "solar:graph-new-bold",
+                      label: "Usage This Month",
+                      value: `${((plan.usageCount / plan.usageLimit) * 100).toFixed(1)}%`,
+                      color: "text-purple-600"
+                    },
+                    {
+                      icon: "solar:key-bold",
+                      label: "Active API Keys",
+                      value: plan.apiKeys.length,
+                      color: "text-teal-600"
+                    }
+                  ].map((stat, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-violet-600/5 via-purple-600/5 to-teal-500/5 border border-white/10"
+                    >
+                      <div className={`p-2 rounded-lg bg-white/50 ${stat.color}`}>
+                        <Icon icon={stat.icon} className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">{stat.label}</p>
+                        <p className="text-base font-semibold text-gray-700">{stat.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              </div>
             </div>
-          </motion.div>
-
-          {/* Decorative line */}
-          <motion.div
-            initial={{ scaleX: 0, opacity: 0 }}
-            animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
-            className="absolute -bottom-6 left-0 right-0 flex flex-col items-center"
-          >
-
           </motion.div>
         </div>
 
@@ -286,7 +343,7 @@ export default function PlanDetails({ params }) {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm border border-gray-100 relative overflow-hidden"
+              className="bg-white rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm border border-gray-100 relative overflow-hidden"
             >
               {/* Decorative Background */}
               <div className="absolute inset-0">
@@ -301,7 +358,7 @@ export default function PlanDetails({ params }) {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="p-2 bg-gradient-to-br from-violet-600 via-purple-600 to-teal-500 rounded-lg shadow-lg shadow-violet-100/50">
+                      <div className="p-3 bg-gradient-to-br from-violet-600 via-purple-600 to-teal-500 rounded-lg shadow-lg shadow-violet-100/50">
                         <Icon icon="solar:graph-new-bold" className="w-4 h-4 text-white" />
                       </div>
                       <h2 className="text-base font-medium text-gray-900">Usage Overview</h2>
