@@ -1,29 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { usePathname } from 'next/navigation';
 import { Icon } from '@iconify/react';
-import Logo from '@/components/shared/Logo';
+import { motion } from 'framer-motion';
 
 export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
-
-  // Handle screen resize
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      setIsSidebarOpen(!mobile);
-    };
-
-    handleResize(); // Initial check
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const menuItems = [
     {
@@ -45,35 +30,40 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Overlay for mobile */}
-      {isMobile && isSidebarOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 md:hidden"
-        />
-      )}
-
       {/* Sidebar */}
       <motion.aside 
-        initial={isMobile ? { x: -300 } : false}
-        animate={{ 
-          x: isSidebarOpen ? 0 : (isMobile ? -300 : -240),
-          width: isSidebarOpen ? (isMobile ? 300 : 240) : 0
-        }}
-        transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-        className={`fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 shadow-sm
-          ${isMobile ? 'w-[300px]' : 'w-60'}`}
+        initial={{ x: -300 }}
+        animate={{ x: 0 }}
+        className={`fixed top-0 left-0 z-40 h-screen transition-transform ${
+          isSidebarOpen ? 'w-64' : 'w-20'
+        } bg-white border-r border-gray-200 shadow-sm`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo and Toggle */}
+          {/* Logo */}
           <div className="h-16 flex items-center justify-between px-4">
-            {isSidebarOpen && <Logo />}
+            {isSidebarOpen && (
+              <Link href="/" className="flex items-center space-x-3">
+                <div className="w-10 h-10 relative">
+                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                    <path
+                      d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
+                      className="fill-indigo-600"
+                    />
+                    <path
+                      d="M35 50 C35 40, 50 40, 50 50 C50 60, 65 60, 65 50"
+                      className="fill-none stroke-white stroke-[3]"
+                    />
+                  </svg>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-lg font-bold text-indigo-600 leading-none">Pak-OTP</span>
+                  <span className="text-xs text-gray-500">Secure Authentication</span>
+                </div>
+              </Link>
+            )}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+              className="p-2 rounded-lg hover:bg-gray-100"
             >
               <Icon 
                 icon={isSidebarOpen ? "solar:alt-arrow-left-bold-duotone" : "solar:alt-arrow-right-bold-duotone"} 
@@ -83,7 +73,7 @@ export default function DashboardLayout({ children }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-1">
             {menuItems.map((item) => {
               const isActive = pathname === item.path;
               return (
@@ -98,7 +88,7 @@ export default function DashboardLayout({ children }) {
                 >
                   <Icon icon={item.icon} className={`w-6 h-6 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`} />
                   {isSidebarOpen && (
-                    <span className="ml-3 font-medium whitespace-nowrap">{item.name}</span>
+                    <span className="ml-3 font-medium">{item.name}</span>
                   )}
                 </Link>
               );
@@ -107,28 +97,8 @@ export default function DashboardLayout({ children }) {
         </div>
       </motion.aside>
 
-      {/* Mobile Header */}
-      {isMobile && (
-        <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center px-4 z-20">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
-          >
-            <Icon icon="solar:hamburger-menu-bold-duotone" className="w-6 h-6 text-gray-500" />
-          </button>
-          <div className="ml-4">
-            <Logo />
-          </div>
-        </div>
-      )}
-
       {/* Main content */}
-      <div 
-        className={`
-          ${isMobile ? 'ml-0 pt-16' : (isSidebarOpen ? 'ml-60' : 'ml-0')} 
-          transition-all duration-300
-        `}
-      >
+      <div className={`${isSidebarOpen ? 'ml-64' : 'ml-20'} p-8 transition-all duration-300`}>
         {children}
       </div>
     </div>

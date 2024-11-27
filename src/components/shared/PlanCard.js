@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default function PlanCard({ plan }) {
   return (
-    <Link href={`/dashboard/plan/${plan.id}`} key={plan.id}>
+    <Link href={`/dashboard/plan/${plan.id}`}>
       <motion.div
         whileHover={{ 
           y: -8,
@@ -187,12 +187,8 @@ export default function PlanCard({ plan }) {
                 </div>
               </div>
 
-              {/* Action Button */}
-              <motion.button 
-                className="w-full relative overflow-hidden rounded-xl"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
+              {/* View Details Button */}
+              <div className="relative overflow-hidden rounded-xl">
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-90" />
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZmYiIHN0b3Atb3BhY2l0eT0iMC4wNSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIwIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHBhdGggZmlsbD0idXJsKCNnKSIgZD0iTTAgMGgyMDB2MjAwSDB6Ii8+PC9zdmc+')] bg-cover opacity-100" />
                 <div className="relative px-5 py-2.5 flex items-center justify-center space-x-2">
@@ -202,7 +198,7 @@ export default function PlanCard({ plan }) {
                     className="w-4 h-4 text-white transform group-hover:translate-x-1 transition-transform" 
                   />
                 </div>
-              </motion.button>
+              </div>
             </div>
           </div>
         </div>

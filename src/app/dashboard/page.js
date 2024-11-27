@@ -67,11 +67,15 @@ export default function Dashboard() {
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Dashboard Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6 sm:mb-8">
-        <div>
+        <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Dashboard
           </h1>
           <p className="text-gray-500 text-sm mt-1">Welcome back to your OTP management portal</p>
+          {/* Elegant Gradient Separator */}
+          <div className="mt-4">
+            <div className="h-1 w-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-transparent rounded-full"></div>
+          </div>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
