@@ -281,7 +281,7 @@ export default function PlanDetails({ params }) {
           </motion.div>
 
           {/* Usage and Plan Validity Section */}
-          <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+          <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
             {/* Usage Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -414,7 +414,7 @@ export default function PlanDetails({ params }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm border border-gray-100 md:col-span-2 lg:col-span-3"
+              className="bg-white rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm border border-gray-100"
             >
               <div className="relative">
                 {/* Header Section */}
