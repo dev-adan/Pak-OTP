@@ -54,7 +54,10 @@ const handler = NextAuth({
   ],
   pages: {
     signIn: '/auth/signin',
+    signOut: '/auth/signout',
     error: '/auth/error',
+    verifyRequest: '/auth/verify-request',
+    newUser: '/auth/new-user'
   },
   session: {
     strategy: "jwt",
@@ -107,10 +110,27 @@ const handler = NextAuth({
       name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
       options: {
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'none',
         path: '/',
         secure: true,
         domain: process.env.NODE_ENV === 'production' ? 'pak-otp.vercel.app' : undefined
+      }
+    },
+    callbackUrl: {
+      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
+      options: {
+        sameSite: 'none',
+        path: '/',
+        secure: true
+      }
+    },
+    csrfToken: {
+      name: `${process.env.NODE_ENV === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true
       }
     }
   },

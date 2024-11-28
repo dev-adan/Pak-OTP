@@ -30,13 +30,9 @@ const nextConfig = {
             value: 'strict-origin-when-cross-origin'
           }
         ]
-      }
-    ];
-
-    // Add CORS headers only in production
-    if (process.env.NODE_ENV === 'production') {
-      headers.push({
-        source: '/api/:path*',
+      },
+      {
+        source: '/:path*',
         headers: [
           {
             key: 'Access-Control-Allow-Credentials',
@@ -48,15 +44,15 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Methods',
-            value: 'GET,POST,OPTIONS'
+            value: 'GET,POST,PUT,DELETE,OPTIONS'
           },
           {
             key: 'Access-Control-Allow-Headers',
             value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
           }
         ]
-      });
-    }
+      }
+    ];
 
     return headers;
   }
