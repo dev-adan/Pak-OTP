@@ -21,19 +21,30 @@ async function connectDB() {
     const opts = {
       bufferCommands: false,
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
+    try {
+      cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+        console.log('MongoDB connected successfully');
+        return mongoose;
+      });
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      cached.promise = null;
+      throw error;
+    }
   }
 
   try {
     cached.conn = await cached.promise;
-  } catch (e) {
+  } catch (error) {
+    console.error('Error resolving MongoDB connection:', error);
     cached.promise = null;
-    throw e;
+    throw error;
   }
 
   return cached.conn;

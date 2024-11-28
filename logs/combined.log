@@ -262,3 +262,5 @@
 2024-11-28 17:23:13:2313 [32minfo[39m: [32mSMTP server is ready to send emails[39m
 2024-11-28 17:25:06:256 [33mwarn[39m: [33mFailed login attempt for user: adanaligakhar@gmail.com[39m
 2024-11-28 17:25:06:256 [31merror[39m: [31mAuthentication error: Invalid password[39m
+2024-11-28 17:38:34:3834 [32minfo[39m: [32mSuccessful login for user: adanaligakhar@gmail.com[39m
+2024-11-28 17:39:02:392 [32minfo[39m: [32mSuccessful login for user: adanaligakhar@gmail.com[39m

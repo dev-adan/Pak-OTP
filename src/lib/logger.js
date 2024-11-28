@@ -35,25 +35,19 @@ const logger = winston.createLogger({
   levels,
   format,
   transports: [
-    // Write all logs with level 'error' and below to error.log
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-    }),
-    // Write all logs with level 'info' and below to combined.log
-    new winston.transports.File({
-      filename: 'logs/combined.log',
-    }),
-    // Write to console in development
-    process.env.NODE_ENV !== 'production'
-      ? new winston.transports.Console()
-      : null,
-  ].filter(Boolean),
+    // Use Console transport for all environments
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    })
+  ],
 });
 
-// Create a stream object with a 'write' function that will be used by morgan
+// Create a stream object with a write function
 const stream = {
-  write: (message) => logger.http(message.trim()),
+  write: (message) => logger.info(message.trim()),
 };
 
 export { logger, stream };
