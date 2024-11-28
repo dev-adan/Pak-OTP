@@ -27,9 +27,24 @@ transporter.verify(function (error, success) {
   }
 });
 
-// Generate a random 6-digit OTP
-export function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+// Generate a random 6-digit OTP and store it
+export async function generateOTP(email) {
+  try {
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP
+    const stored = await storeOTP(email, otp);
+    if (!stored) {
+      throw new Error('Failed to store OTP');
+    }
+    
+    logger.info(`Generated and stored OTP for email: ${email}`);
+    return otp;
+  } catch (error) {
+    logger.error(`Error generating OTP: ${error.message}`);
+    throw error;
+  }
 }
 
 // Store OTP in MongoDB
@@ -38,16 +53,16 @@ export async function storeOTP(email, otp) {
     await connectDB();
     
     // Delete any existing OTP for this email
-    await OTP.deleteMany({ email });
+    await OTP.deleteMany({ email: email.toLowerCase() });
     
     // Create new OTP document with expiry
     const otpDoc = await OTP.create({
-      email,
+      email: email.toLowerCase(),
       otp,
       expiry: Date.now() + 15 * 60 * 1000, // 15 minutes
     });
     
-    logger.info(`OTP stored for email: ${email}, OTP: ${otp}`);
+    logger.info(`OTP stored successfully. Email: ${email}, OTP: ${otp}`);
     return true;
   } catch (error) {
     logger.error(`Error storing OTP: ${error.message}`);
@@ -62,7 +77,7 @@ export async function verifyOTP(email, userOTP) {
     
     logger.info(`Verifying OTP for email: ${email}, Provided OTP: ${userOTP}`);
     
-    const otpDoc = await OTP.findOne({ email });
+    const otpDoc = await OTP.findOne({ email: email.toLowerCase() });
     
     if (!otpDoc) {
       logger.warn(`No OTP found for email: ${email}`);

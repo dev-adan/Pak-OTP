@@ -38,6 +38,17 @@ export default function LoginModal({ isOpen, onClose }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+
+  useEffect(() => {
+    let timer;
+    if (resendTimer > 0) {
+      timer = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendTimer]);
 
   useEffect(() => {
     let interval;
@@ -448,14 +459,16 @@ export default function LoginModal({ isOpen, onClose }) {
 
   const handleResetEmailSubmit = async (e) => {
     e.preventDefault();
-    if (!validateEmail(resetEmail)) {
-      setIsEmailValid(false);
-      return;
-    }
-
+    
     try {
       setLoading(true);
       setError('');
+
+      // Validate email format
+      if (!isEmailValid) {
+        setError('Please enter a valid email address');
+        return;
+      }
 
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
@@ -467,15 +480,19 @@ export default function LoginModal({ isOpen, onClose }) {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to send reset code');
       }
 
-      toast.success('Reset code sent to your email!');
+      // Show success message
+      toast.success('Reset code sent successfully');
       setShowOtpInput(true);
+      setError('');
     } catch (error) {
       toast.error(error.message);
       setError(error.message);
+      setShowOtpInput(false);
     } finally {
       setLoading(false);
     }
@@ -490,6 +507,21 @@ export default function LoginModal({ isOpen, onClose }) {
 
     if (value && index < 5) {
       resetOtpRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleResetOtpPaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').trim();
+    
+    // Check if pasted content is 6 digits
+    if (/^\d{6}$/.test(pastedData)) {
+      const digits = pastedData.split('');
+      setResetOtpDigits(digits);
+      // Focus the last input
+      if (resetOtpRefs[5].current) {
+        resetOtpRefs[5].current.focus();
+      }
     }
   };
 
@@ -580,6 +612,36 @@ export default function LoginModal({ isOpen, onClose }) {
     }
   };
 
+  const handleResendResetOtp = async () => {
+    try {
+      setResendLoading(true);
+      setError('');
+
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail,
+          isReset: true
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to resend code');
+      }
+
+      toast.success('New code sent successfully');
+      setResendTimer(30); // Start 30 second timer
+      setResetOtpDigits(['', '', '', '', '', '']); // Clear OTP inputs
+    } catch (error) {
+      toast.error(error.message);
+      setError(error.message);
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const renderResetPassword = () => (
     <motion.div
       key="reset-password"
@@ -588,20 +650,10 @@ export default function LoginModal({ isOpen, onClose }) {
       exit={{ opacity: 0, x: -20 }}
       className="space-y-4 p-6"
     >
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Reset Password</h2>
-        <p className="text-sm text-gray-600 mt-1">
-          {!showOtpInput 
-            ? "Enter your email to receive a reset code" 
-            : !showNewPasswordFields 
-              ? "Enter the code sent to your email"
-              : "Enter your new password"
-          }
-        </p>
-      </div>
-
       {/* Back button */}
-      <button
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         onClick={() => {
           if (showNewPasswordFields) {
             setShowNewPasswordFields(false);
@@ -614,10 +666,25 @@ export default function LoginModal({ isOpen, onClose }) {
           }
           setError('');
         }}
-        className="absolute top-4 left-4 p-2 text-gray-600 hover:text-gray-900"
+        className="absolute top-4 left-4 p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
+        aria-label="Go back"
       >
-        <Icon icon="solar:arrow-left-bold-duotone" className="w-6 h-6" />
-      </button>
+        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </motion.button>
+
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Reset Password</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          {!showOtpInput 
+            ? "Enter your email to receive a reset code" 
+            : !showNewPasswordFields 
+              ? "Enter the code sent to your email"
+              : "Enter your new password"
+          }
+        </p>
+      </div>
 
       {!showOtpInput ? (
         // Email input form
@@ -632,19 +699,21 @@ export default function LoginModal({ isOpen, onClose }) {
               value={resetEmail}
               onChange={handleResetEmailChange}
               className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 ${
-                !isEmailValid ? 'border-red-500' : 'border-gray-300'
+                error ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Enter your email"
             />
-            {!isEmailValid && (
-              <p className="mt-1 text-xs text-red-500">Please enter a valid email address</p>
+            {error && (
+              <p className="mt-1 text-sm text-red-500">{error}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={loading || !resetEmail}
-            className="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
+              error ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'
+            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {loading ? 'Sending...' : 'Send Reset Code'}
           </button>
@@ -661,6 +730,7 @@ export default function LoginModal({ isOpen, onClose }) {
                   maxLength="1"
                   value={digit}
                   onChange={(e) => handleResetOtpChange(index, e.target.value)}
+                  onPaste={handleResetOtpPaste}
                   ref={resetOtpRefs[index]}
                   className="w-12 h-12 text-center text-xl font-semibold border rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                 />
@@ -669,13 +739,30 @@ export default function LoginModal({ isOpen, onClose }) {
             {error && <p className="text-sm text-red-500 text-center">{error}</p>}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || resetOtpDigits.some(digit => !digit)}
-            className="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Verifying...' : 'Verify Code'}
-          </button>
+          <div className="space-y-4">
+            <button
+              type="submit"
+              disabled={loading || resetOtpDigits.some(digit => !digit)}
+              className="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Verifying...' : 'Verify Code'}
+            </button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={handleResendResetOtp}
+                disabled={resendLoading || resendTimer > 0}
+                className="text-sm text-indigo-600 hover:text-indigo-500 disabled:text-gray-400 disabled:cursor-not-allowed"
+              >
+                {resendLoading 
+                  ? 'Sending...'
+                  : resendTimer > 0 
+                    ? `Resend code in ${resendTimer}s` 
+                    : 'Resend code'}
+              </button>
+            </div>
+          </div>
         </form>
       ) : (
         // New password form
@@ -723,22 +810,43 @@ export default function LoginModal({ isOpen, onClose }) {
       )}
 
       <div className="text-center mt-4">
-        <button
-          onClick={() => {
-            setIsResetPassword(false);
-            setShowOtpInput(false);
-            setShowNewPasswordFields(false);
-            setResetEmail('');
-            setResetOtpDigits(['', '', '', '', '', '']);
-            setNewPassword('');
-            setConfirmPassword('');
-            setPasswordError('');
-            setIsLogin(true);
-          }}
-          className="text-sm text-indigo-600 hover:text-indigo-500"
-        >
-          Back to Sign In
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={() => {
+              setIsResetPassword(false);
+              setShowOtpInput(false);
+              setShowNewPasswordFields(false);
+              setResetEmail('');
+              setResetOtpDigits(['', '', '', '', '', '']);
+              setNewPassword('');
+              setConfirmPassword('');
+              setPasswordError('');
+              setIsLogin(true);
+            }}
+            className="text-sm text-indigo-600 hover:text-indigo-500"
+          >
+            Back to Sign In
+          </button>
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <button
+              onClick={() => {
+                setIsResetPassword(false);
+                setShowOtpInput(false);
+                setShowNewPasswordFields(false);
+                setResetEmail('');
+                setResetOtpDigits(['', '', '', '', '', '']);
+                setNewPassword('');
+                setConfirmPassword('');
+                setPasswordError('');
+                setIsLogin(false);
+              }}
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Sign up
+            </button>
+          </p>
+        </div>
       </div>
     </motion.div>
   );
@@ -762,7 +870,7 @@ export default function LoginModal({ isOpen, onClose }) {
           }}
           className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-all duration-200 text-xs sm:text-base"
         >
-          <Icon icon="heroicons:arrow-left-20-solid" className="w-3 h-3 sm:w-5 sm:h-5" />
+          <Icon icon="heroicons:arrow-left-bold-duotone" className="w-3 h-3 sm:w-5 sm:h-5" />
           <span>Back</span>
         </button>
         <button
@@ -797,7 +905,7 @@ export default function LoginModal({ isOpen, onClose }) {
             setSlideDirection(-1);
             setShowOtpScreen(false);
           }}
-          className="mt-1 sm:mt-2 text-[10px] sm:text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
+          className="mt-1 sm:mt-2 text-[10px] xs:text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
         >
           Change email address?
         </button>
@@ -827,11 +935,11 @@ export default function LoginModal({ isOpen, onClose }) {
         <button
           onClick={handleVerifyOtp}
           disabled={loading || otpDigits.some(digit => !digit)}
-          className={`w-full px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-sm cursor-pointer disabled:cursor-not-allowed`}
+          className={`w-full px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-sm cursor-pointer`}
         >
           {loading ? (
             <div className="flex items-center justify-center gap-2">
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
@@ -871,7 +979,7 @@ export default function LoginModal({ isOpen, onClose }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50"
             onClick={onClose}
           />
           <motion.div
@@ -879,234 +987,209 @@ export default function LoginModal({ isOpen, onClose }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-6 pointer-events-none"
+            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
-            <div 
-              className="bg-white w-full max-w-md rounded-2xl shadow-xl relative overflow-hidden min-h-[360px] xs:min-h-[400px] sm:min-h-[520px] pointer-events-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                {showOtpScreen ? (
-                  renderOtpScreen()
-                ) : (
-                  <motion.div
-                    key="signup-screen"
-                    custom={slideDirection}
-                    variants={slideVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    className="relative p-6"
-                    style={{ minHeight: '100%' }}
-                  >
-                    <button
-                      onClick={onClose}
-                      className="absolute right-4 top-4 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-lg p-1"
+            <div className="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-md">
+              {isResetPassword ? (
+                renderResetPassword()
+              ) : showOtpInput ? (
+                renderOtpScreen()
+              ) : (
+                <div className="p-6">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {isLogin ? 'Welcome Back!' : 'Create Account'}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {isLogin
+                        ? 'Sign in to your account'
+                        : 'Sign up for a new account'}
+                    </p>
+                  </div>
+                  <div className="mt-8 mb-6">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleGoogleSignIn}
+                      disabled={loading}
+                      className="w-full flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-75 disabled:cursor-not-allowed"
                     >
-                      <Icon icon="heroicons:x-mark-20-solid" className="w-5 h-5" />
-                    </button>
+                      <Icon icon="flat-color-icons:google" className="w-5 h-5 mr-2" />
+                      Continue with Google
+                    </motion.button>
 
-                    <div className="text-center mb-8">
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        {isResetPassword ? 'Reset Password' : isLogin ? 'Welcome Back!' : 'Create Account'}
-                      </h2>
-                      <p className="text-sm text-gray-500">
-                        {isResetPassword
-                          ? 'Enter your email to reset your password'
-                          : isLogin
-                          ? 'Sign in to your account'
-                          : 'Sign up for a new account'}
-                      </p>
+                    <div className="relative mt-6">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300" />
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+                      </div>
                     </div>
+                  </div>
 
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="mb-4 backdrop-blur-md bg-red-50/30 border border-red-100 rounded-xl overflow-hidden"
-                      >
-                        <div className="px-4 py-3 flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            <svg 
-                              className="h-5 w-5 text-red-400" 
-                              viewBox="0 0 24 24" 
-                              fill="none" 
-                              stroke="currentColor"
-                            >
-                              <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-                              <path d="M12 8v4m0 4h.01" strokeWidth="2" strokeLinecap="round"/>
-                            </svg>
-                          </div>
-                          <div className="flex-1 text-sm text-red-600">
-                            <motion.p
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: 0.1 }}
-                            >
-                              {error}
-                            </motion.p>
-                          </div>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mb-4 backdrop-blur-md bg-red-50/30 border border-red-100 rounded-xl overflow-hidden"
+                    >
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          <svg 
+                            className="h-5 w-5 text-red-400" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor"
+                          >
+                            <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                            <path d="M12 8v4m0 4h.01" strokeWidth="2" strokeLinecap="round"/>
+                          </svg>
                         </div>
-                        <div 
-                          className="h-1 bg-gradient-to-r from-red-300/50 to-red-400/50"
-                          style={{
-                            clipPath: 'polygon(0 0, 100% 0, 98% 100%, 2% 100%)'
-                          }}
-                        />
-                      </motion.div>
-                    )}
-                    {!isResetPassword && (
-                      <div className="mb-6">
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={handleGoogleSignIn}
-                          disabled={loading}
-                          className="w-full flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed"
-                        >
-                          <Icon icon="flat-color-icons:google" className="w-5 h-5 mr-2" />
-                          Continue with Google
-                        </motion.button>
-
-                        <div className="relative mt-6">
-                          <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300" />
-                          </div>
-                          <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">Or continue with email</span>
-                          </div>
+                        <div className="flex-1 text-sm text-red-600">
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.1 }}
+                          >
+                            {error}
+                          </motion.p>
                         </div>
                       </div>
-                    )}
-
-                    {isResetPassword ? (
-                      renderResetPassword()
-                    ) : (
-                      <form onSubmit={handleFormSubmit} className="space-y-4">
-                        {!isLogin && (
-                          <div className="mb-4">
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                              Full Name
-                            </label>
-                            <input
-                              type="text"
-                              id="name"
-                              name="name"
-                              value={formData.name}
-                              onChange={handleInputChange}
-                              className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                                ${fieldErrors.name ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
-                                outline-none shadow-sm text-gray-900 placeholder-gray-400`}
-                              required
-                              placeholder="Enter your full name"
-                            />
-                          </div>
-                        )}
-
-                        <div className="mb-4">
-                          <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
-                            Email Address
-                          </label>
-                          <input
-                            type="email"
-                            id="login-email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                              ${fieldErrors.email ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
-                              outline-none shadow-sm text-gray-900 placeholder-gray-400`}
-                            placeholder="Enter your email"
-                            required
-                          />
-                        </div>
-
-                        <div className="mb-4">
-                          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                            Password
-                          </label>
-                          <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleInputChange}
-                            className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                              ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
-                              outline-none shadow-sm text-gray-900 placeholder-gray-400`}
-                            placeholder={isLogin ? "Enter your password" : "Create a password"}
-                            required
-                          />
-                        </div>
-
-                        {isLogin && (
-                          <div className="text-sm">
-                            <button
-                              type="button"
-                              onClick={() => setIsResetPassword(true)}
-                              className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition-colors duration-200"
-                            >
-                              Forgot your password?
-                            </button>
-                          </div>
-                        )}
-
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleFormSubmit(e);
-                          }}
-                          className={`w-full flex justify-center py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
-                            ${error ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : ''} 
-                            ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-                        >
-                          {loading ? (
-                            <div className="flex items-center justify-center">
-                              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              {isLogin ? 'Signing In...' : 'Sending OTP...'}
-                            </div>
-                          ) : isLogin ? (
-                            'Sign In'
-                          ) : (
-                            'Sign Up'
-                          )}
-                        </button>
-                      </form>
-                    )}
-                    <p className="mt-6 text-center text-sm text-gray-500">
-                      {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsLogin(!isLogin);
-                          setError('');
-                          setFieldErrors({
-                            email: false,
-                            password: false,
-                            name: false
-                          });
-                          setFormData({
-                            name: '',
-                            email: '',
-                            password: ''
-                          });
-                          setShowOtpScreen(false);
-                          setOtpDigits(['', '', '', '', '', '']);
+                      <div 
+                        className="h-1 bg-gradient-to-r from-red-300/50 to-red-400/50"
+                        style={{
+                          clipPath: 'polygon(0 0, 100% 0, 98% 100%, 2% 100%)'
                         }}
-                        className="font-medium text-indigo-600 hover:text-indigo-500"
+                      />
+                    </motion.div>
+                  )}
+                  {!isResetPassword && (
+                    <form onSubmit={handleFormSubmit} className="space-y-4">
+                      {!isLogin && (
+                        <div className="mb-4">
+                          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                            Full Name
+                          </label>
+                          <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
+                              ${fieldErrors.name ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
+                              outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                            required
+                            placeholder="Enter your full name"
+                          />
+                        </div>
+                      )}
+
+                      <div className="mb-4">
+                        <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          id="login-email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
+                            ${fieldErrors.email ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
+                            outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                          placeholder="Enter your email"
+                          required
+                        />
+                      </div>
+
+                      <div className="mb-4">
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                          Password
+                        </label>
+                        <input
+                          type="password"
+                          id="password"
+                          name="password"
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
+                            ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
+                            outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                          placeholder={isLogin ? "Enter your password" : "Create a password"}
+                          required
+                        />
+                      </div>
+
+                      {isLogin && (
+                        <div className="text-sm">
+                          <button
+                            type="button"
+                            onClick={() => setIsResetPassword(true)}
+                            className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition-colors duration-200"
+                          >
+                            Forgot your password?
+                          </button>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleFormSubmit(e);
+                        }}
+                        className={`w-full flex justify-center py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
+                          ${error ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : ''} 
+                          ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                       >
-                        {isLogin ? 'Sign up' : 'Sign in'}
+                        {loading ? (
+                          <div className="flex items-center justify-center">
+                            <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            {isLogin ? 'Signing In...' : 'Sending OTP...'}
+                          </div>
+                        ) : isLogin ? (
+                          'Sign In'
+                        ) : (
+                          'Sign Up'
+                        )}
                       </button>
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    </form>
+                  )}
+                  <p className="mt-6 text-center text-sm text-gray-500">
+                    {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(!isLogin);
+                        setError('');
+                        setFieldErrors({
+                          email: false,
+                          password: false,
+                          name: false
+                        });
+                        setFormData({
+                          name: '',
+                          email: '',
+                          password: ''
+                        });
+                        setShowOtpScreen(false);
+                        setOtpDigits(['', '', '', '', '', '']);
+                      }}
+                      className="font-medium text-indigo-600 hover:text-indigo-500"
+                    >
+                      {isLogin ? 'Sign up' : 'Sign in'}
+                    </button>
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
         </>

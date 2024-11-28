@@ -6,7 +6,7 @@ import User from '@/models/User';
 
 export async function POST(req) {
   try {
-    const { name, email, password, otp, isReset } = await req.json();
+    const { email, otp, isReset } = await req.json();
     
     logger.info(`Received OTP verification request for email: ${email}, type: ${isReset ? 'reset' : 'registration'}`);
 
@@ -25,7 +25,18 @@ export async function POST(req) {
     // Ensure MongoDB connection
     await connectDB();
 
-    // Verify OTP first
+    // For password reset, verify user exists
+    if (isReset) {
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return NextResponse.json(
+          { error: 'No account found with this email address' },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Verify OTP
     const result = await verifyOTP(email.toLowerCase(), otpString);
 
     if (!result.valid) {
@@ -36,7 +47,7 @@ export async function POST(req) {
       );
     }
 
-    // For password reset, we don't need to create a user
+    // For password reset, just return success
     if (isReset) {
       return NextResponse.json(
         { message: 'OTP verified successfully' },
@@ -54,6 +65,7 @@ export async function POST(req) {
     }
 
     // Create new user - password will be hashed by the pre-save middleware
+    const { name, password } = await req.json();
     const newUser = await User.create({
       name,
       email: email.toLowerCase(),
