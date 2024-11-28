@@ -6,37 +6,33 @@ const nextConfig = {
         source: '/:path*',
         headers: [
           {
-            key: 'Set-Cookie',
-            value: '__vercel_live_token=; Path=/; SameSite=None; Secure',
-          },
-          {
             key: 'X-DNS-Prefetch-Control',
-            value: 'on',
+            value: 'on'
           },
           {
             key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains',
+            value: 'max-age=31536000; includeSubDomains'
           },
           {
             key: 'X-Content-Type-Options',
-            value: 'nosniff',
+            value: 'nosniff'
           },
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
+            value: 'SAMEORIGIN'
           },
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block',
+            value: '1; mode=block'
           },
           {
             key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-        ],
-      },
+            value: 'strict-origin-when-cross-origin'
+          }
+        ]
+      }
     ];
-  },
+  }
 };
 
 export default nextConfig;

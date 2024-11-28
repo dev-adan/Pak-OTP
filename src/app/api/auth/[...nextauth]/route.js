@@ -92,14 +92,6 @@ export const authOptions = {
         token.id = user.id;
         token.role = user.role;
       }
-      // If it's a Google login, fetch user from DB to get role
-      if (account?.provider === 'google') {
-        const dbUser = await User.findOne({ email: token.email });
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.id = dbUser._id;
-        }
-      }
       return token;
     },
     async session({ session, token }) {
@@ -111,8 +103,8 @@ export const authOptions = {
     }
   },
   pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
+    signIn: '/',
+    error: '/'
   },
   session: {
     strategy: 'jwt',
@@ -120,16 +112,16 @@ export const authOptions = {
   },
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`,
+      name: 'next-auth.session-token',
       options: {
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: 'none',
         path: '/',
-        secure: process.env.NODE_ENV === 'production'
+        secure: true
       }
     }
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET
 };
 
 const handler = NextAuth(authOptions);

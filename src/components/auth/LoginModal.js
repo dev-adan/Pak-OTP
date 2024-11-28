@@ -143,6 +143,7 @@ export default function LoginModal({ isOpen, onClose }) {
           email: formData.email,
           password: formData.password,
           redirect: false,
+          callbackUrl: `${window.location.origin}/dashboard`
         });
 
         if (result?.error) {
@@ -168,11 +169,8 @@ export default function LoginModal({ isOpen, onClose }) {
         toast.success('Login successful!');
         onClose(); // Close modal first
         
-        // Add a small delay before navigation to ensure modal is closed
-        setTimeout(() => {
-          router.push('/dashboard');
-          router.refresh();
-        }, 100);
+        // Use window.location for a hard redirect
+        window.location.href = `${window.location.origin}/dashboard`;
       } else {
         // Handle Sign Up
         const res = await fetch('/api/auth/send-otp', {
