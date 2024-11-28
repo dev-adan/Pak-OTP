@@ -6,9 +6,9 @@ import User from '@/models/User';
 
 export async function POST(req) {
   try {
-    const { name, email, password, otp } = await req.json();
+    const { name, email, password, otp, isReset } = await req.json();
     
-    logger.info(`Received OTP verification request for email: ${email}`);
+    logger.info(`Received OTP verification request for email: ${email}, type: ${isReset ? 'reset' : 'registration'}`);
 
     if (!email || !otp) {
       return NextResponse.json(
@@ -36,7 +36,15 @@ export async function POST(req) {
       );
     }
 
-    // Check if user already exists
+    // For password reset, we don't need to create a user
+    if (isReset) {
+      return NextResponse.json(
+        { message: 'OTP verified successfully' },
+        { status: 200 }
+      );
+    }
+
+    // For registration, check if user exists and create new user
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return NextResponse.json(
@@ -69,7 +77,7 @@ export async function POST(req) {
   } catch (error) {
     logger.error(`Error in verify-otp: ${error.message}`);
     return NextResponse.json(
-      { error: 'An error occurred during registration' },
+      { error: 'An error occurred during verification' },
       { status: 500 }
     );
   }

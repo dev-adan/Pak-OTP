@@ -33,6 +33,11 @@ export default function LoginModal({ isOpen, onClose }) {
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const otpInputRefs = Array(6).fill(0).map(() => useRef(null));
   const [resendTimer, setResendTimer] = useState(0);
+  const [resetOtpDigits, setResetOtpDigits] = useState(['', '', '', '', '', '']);
+  const resetOtpRefs = Array(6).fill(0).map(() => useRef(null));
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     let interval;
@@ -441,163 +446,301 @@ export default function LoginModal({ isOpen, onClose }) {
     }
   };
 
+  const handleResetEmailSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateEmail(resetEmail)) {
+      setIsEmailValid(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail,
+          isReset: true
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send reset code');
+      }
+
+      toast.success('Reset code sent to your email!');
+      setShowOtpInput(true);
+    } catch (error) {
+      toast.error(error.message);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetOtpChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+
+    const newOtpDigits = [...resetOtpDigits];
+    newOtpDigits[index] = value;
+    setResetOtpDigits(newOtpDigits);
+
+    if (value && index < 5) {
+      resetOtpRefs[index + 1].current?.focus();
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    // Validate password
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail,
+          otp: resetOtpDigits.join(''),
+          newPassword
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to reset password');
+      }
+
+      toast.success('Password reset successful! Please login with your new password.');
+      
+      // Reset states and show login screen
+      setIsResetPassword(false);
+      setShowOtpInput(false);
+      setShowNewPasswordFields(false);
+      setResetEmail('');
+      setResetOtpDigits(['', '', '', '', '', '']);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordError('');
+      setIsLogin(true);
+    } catch (error) {
+      toast.error(error.message);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetOtpSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      setError('');
+
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail,
+          otp: resetOtpDigits.join(''),
+          isReset: true
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid OTP');
+      }
+
+      // Only proceed to password reset if OTP is valid
+      setShowNewPasswordFields(true);
+      setError('');
+    } catch (error) {
+      toast.error(error.message);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderResetPassword = () => (
-    <div className="space-y-4">
+    <motion.div
+      key="reset-password"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="space-y-4 p-6"
+    >
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Reset Password</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          {!showOtpInput 
+            ? "Enter your email to receive a reset code" 
+            : !showNewPasswordFields 
+              ? "Enter the code sent to your email"
+              : "Enter your new password"
+          }
+        </p>
+      </div>
+
+      {/* Back button */}
+      <button
+        onClick={() => {
+          if (showNewPasswordFields) {
+            setShowNewPasswordFields(false);
+          } else if (showOtpInput) {
+            setShowOtpInput(false);
+            setResetOtpDigits(['', '', '', '', '', '']);
+          } else {
+            setIsResetPassword(false);
+            setIsLogin(true);
+          }
+          setError('');
+        }}
+        className="absolute top-4 left-4 p-2 text-gray-600 hover:text-gray-900"
+      >
+        <Icon icon="solar:arrow-left-bold-duotone" className="w-6 h-6" />
+      </button>
+
       {!showOtpInput ? (
-        // Email input section
-        <div>
-          <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email Address
-          </label>
-          <input
-            type="email"
-            id="reset-email"
-            value={resetEmail}
-            onChange={handleResetEmailChange}
-            className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-              ${isEmailValid ? 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white' : 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500'}
-              outline-none shadow-sm text-gray-900 placeholder-gray-400`}
-            placeholder="Enter your email"
-          />
-          {!isEmailValid && (
-            <p className="mt-1 text-sm text-red-500">Please enter a valid email address</p>
-          )}
-          
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleSendCode}
-            disabled={!isEmailValid || !resetEmail || loading}
-            className={`w-full py-3 sm:py-2.5 mt-4 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all
-              ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Sending...
-              </div>
-            ) : (
-              'Send Code'
+        // Email input form
+        <form onSubmit={handleResetEmailSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address
+            </label>
+            <input
+              id="reset-email"
+              type="email"
+              value={resetEmail}
+              onChange={handleResetEmailChange}
+              className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 ${
+                !isEmailValid ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Enter your email"
+            />
+            {!isEmailValid && (
+              <p className="mt-1 text-xs text-red-500">Please enter a valid email address</p>
             )}
-          </motion.button>
-        </div>
-      ) : showNewPasswordFields ? (
-        // New password fields section
-        <form onSubmit={handlePasswordSubmit} className="space-y-4">
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !resetEmail}
+            className="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Sending...' : 'Send Reset Code'}
+          </button>
+        </form>
+      ) : !showNewPasswordFields ? (
+        // OTP input form
+        <form onSubmit={handleResetOtpSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div className="flex justify-center gap-2">
+              {resetOtpDigits.map((digit, index) => (
+                <input
+                  key={index}
+                  type="text"
+                  maxLength="1"
+                  value={digit}
+                  onChange={(e) => handleResetOtpChange(index, e.target.value)}
+                  ref={resetOtpRefs[index]}
+                  className="w-12 h-12 text-center text-xl font-semibold border rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                />
+              ))}
+            </div>
+            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || resetOtpDigits.some(digit => !digit)}
+            className="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Verifying...' : 'Verify Code'}
+          </button>
+        </form>
+      ) : (
+        // New password form
+        <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
           <div>
             <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
               New Password
             </label>
             <input
-              type="password"
               id="new-password"
+              type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                ${passwordError ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
-                outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
               placeholder="Enter new password"
-              minLength={8}
             />
           </div>
-          
+
           <div>
             <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
               Confirm Password
             </label>
             <input
-              type="password"
               id="confirm-password"
+              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                ${passwordError ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
-                outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
               placeholder="Confirm new password"
-              minLength={8}
             />
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            disabled={loading}
-            className={`w-full py-3 sm:py-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all
-              ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Updating...
-              </div>
-            ) : (
-              'Update Password'
-            )}
-          </motion.button>
-        </form>
-      ) : (
-        // OTP input section
-        <div className="space-y-4">
-          <div className="flex justify-center space-x-3">
-            {otpDigits.map((digit, index) => (
-              <input
-                key={index}
-                id={`otp-${index}`}
-                type="text"
-                maxLength="1"
-                value={digit}
-                onChange={(e) => handleOtpChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                onPaste={handlePaste}
-                data-index={index}
-                onFocus={preventScrollBehavior}
-                className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500`}
-              />
-            ))}
-          </div>
+          {passwordError && (
+            <p className="text-sm text-red-500">{passwordError}</p>
+          )}
+
           <button
-            onClick={handleVerifyOtp}
-            disabled={loading || otpDigits.some(digit => !digit)}
-            className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-sm cursor-pointer disabled:cursor-not-allowed`}
+            type="submit"
+            disabled={loading || !newPassword || !confirmPassword}
+            className="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Verifying...</span>
-              </div>
-            ) : (
-              'Verify Code'
-            )}
+            {loading ? 'Resetting...' : 'Reset Password'}
           </button>
-        </div>
+        </form>
       )}
 
-      <button
-        onClick={() => {
-          setIsResetPassword(false);
-          setShowOtpInput(false);
-          setShowNewPasswordFields(false);
-          setResetEmail('');
-          setOtpDigits(['', '', '', '', '', '']);
-          setNewPassword('');
-          setConfirmPassword('');
-          setPasswordError('');
-        }}
-        className="w-full text-sm text-indigo-600 hover:text-indigo-500 text-center mt-4"
-      >
-        Back to Sign In
-      </button>
-    </div>
+      <div className="text-center mt-4">
+        <button
+          onClick={() => {
+            setIsResetPassword(false);
+            setShowOtpInput(false);
+            setShowNewPasswordFields(false);
+            setResetEmail('');
+            setResetOtpDigits(['', '', '', '', '', '']);
+            setNewPassword('');
+            setConfirmPassword('');
+            setPasswordError('');
+            setIsLogin(true);
+          }}
+          className="text-sm text-indigo-600 hover:text-indigo-500"
+        >
+          Back to Sign In
+        </button>
+      </div>
+    </motion.div>
   );
 
   const renderOtpScreen = () => (
@@ -665,7 +808,6 @@ export default function LoginModal({ isOpen, onClose }) {
           {otpDigits.map((digit, index) => (
             <input
               key={index}
-              id={`otp-${index}`}
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
@@ -685,7 +827,7 @@ export default function LoginModal({ isOpen, onClose }) {
         <button
           onClick={handleVerifyOtp}
           disabled={loading || otpDigits.some(digit => !digit)}
-          className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-sm cursor-pointer disabled:cursor-not-allowed`}
+          className={`w-full px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-sm cursor-pointer disabled:cursor-not-allowed`}
         >
           {loading ? (
             <div className="flex items-center justify-center gap-2">
@@ -768,7 +910,7 @@ export default function LoginModal({ isOpen, onClose }) {
                       <h2 className="text-2xl font-bold text-gray-900">
                         {isResetPassword ? 'Reset Password' : isLogin ? 'Welcome Back!' : 'Create Account'}
                       </h2>
-                      <p className="mt-2 text-sm text-gray-500">
+                      <p className="text-sm text-gray-500">
                         {isResetPassword
                           ? 'Enter your email to reset your password'
                           : isLogin
@@ -854,7 +996,7 @@ export default function LoginModal({ isOpen, onClose }) {
                               value={formData.name}
                               onChange={handleInputChange}
                               className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                                ${fieldErrors.name ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                                ${fieldErrors.name ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
                                 outline-none shadow-sm text-gray-900 placeholder-gray-400`}
                               required
                               placeholder="Enter your full name"
@@ -873,7 +1015,7 @@ export default function LoginModal({ isOpen, onClose }) {
                             value={formData.email}
                             onChange={handleInputChange}
                             className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                              ${fieldErrors.email ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                              ${fieldErrors.email ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
                               outline-none shadow-sm text-gray-900 placeholder-gray-400`}
                             placeholder="Enter your email"
                             required
@@ -891,7 +1033,7 @@ export default function LoginModal({ isOpen, onClose }) {
                             value={formData.password}
                             onChange={handleInputChange}
                             className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                              ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                              ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
                               outline-none shadow-sm text-gray-900 placeholder-gray-400`}
                             placeholder={isLogin ? "Enter your password" : "Create a password"}
                             required
