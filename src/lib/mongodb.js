@@ -1,51 +1,49 @@
+import { MongoClient } from 'mongodb';
 import mongoose from 'mongoose';
+import { logger } from './logger';
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your MONGODB_URI to .env.local');
+  throw new Error('Please add your Mongo URI to .env.local');
 }
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI;
 
-let cached = global.mongoose;
+let clientPromise;
+let cachedClient = null;
+let cachedDb = null;
 
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+if (process.env.NODE_ENV === 'development') {
+  if (!global._mongoClientPromise) {
+    const client = new MongoClient(uri);
+    global._mongoClientPromise = client.connect();
+  }
+  clientPromise = global._mongoClientPromise;
+} else {
+  const client = new MongoClient(uri);
+  clientPromise = client.connect();
 }
 
-async function connectDB() {
-  if (cached.conn) {
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    };
-
-    try {
-      cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-        console.log('MongoDB connected successfully');
-        return mongoose;
-      });
-    } catch (error) {
-      console.error('MongoDB connection error:', error);
-      cached.promise = null;
-      throw error;
-    }
-  }
-
+export async function connectDB() {
   try {
-    cached.conn = await cached.promise;
-  } catch (error) {
-    console.error('Error resolving MongoDB connection:', error);
-    cached.promise = null;
-    throw error;
-  }
+    if (mongoose.connection.readyState >= 1) {
+      return;
+    }
 
-  return cached.conn;
+    await mongoose.connect(uri);
+    logger.info('MongoDB connected successfully');
+  } catch (error) {
+    logger.error(`MongoDB connection error: ${error.message}`);
+    throw new Error('Error connecting to database');
+  }
 }
 
-export default connectDB;
+export async function getDb() {
+  if (!cachedClient || !cachedDb) {
+    cachedClient = await clientPromise;
+    cachedDb = cachedClient.db();
+    logger.info('New database connection established');
+  }
+  return { client: cachedClient, db: cachedDb };
+}
+
+export default clientPromise;
