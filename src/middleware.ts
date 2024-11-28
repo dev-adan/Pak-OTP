@@ -28,9 +28,24 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // Special handling for Vercel.live domain
-  if (isVercelLive && isProd) {
-    response.headers.set('Set-Cookie', '__vercel_live_token=; Path=/; Secure; SameSite=None');
+  // Special handling for Vercel.live domain and production environment
+  if (isProd) {
+    // Set SameSite=None for all cookies in production
+    const cookies = request.cookies.getAll();
+    cookies.forEach(cookie => {
+      response.headers.append(
+        'Set-Cookie',
+        `${cookie.name}=${cookie.value}; Path=/; Secure; SameSite=None`
+      );
+    });
+
+    // Handle Vercel.live specific cookie
+    if (isVercelLive) {
+      response.headers.append(
+        'Set-Cookie',
+        '__vercel_live_token=; Path=/; Secure; SameSite=None'
+      );
+    }
   }
 
   // Return modified response
