@@ -7,11 +7,26 @@ function isProtectedRoute(pathname) {
   return protectedPaths.some(path => pathname.startsWith(path));
 }
 
+// Middleware function to handle requests
+function handleRequest(req) {
+  const response = NextResponse.next();
+  
+  // Handle Vercel preview cookie
+  if (process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'development') {
+    response.headers.set('Set-Cookie', '__vercel_live_token=; Path=/; SameSite=None; Secure');
+  }
+
+  return response;
+}
+
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const isAuth = !!token;
     const pathname = req.nextUrl.pathname;
+
+    // Handle Vercel preview cookie first
+    const response = handleRequest(req);
 
     // Rate limiting for auth routes
     if (pathname.startsWith('/api/auth')) {
