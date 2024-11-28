@@ -6,10 +6,10 @@ import User from '@/models/User';
 
 export async function POST(req) {
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, isResend } = await req.json();
 
     // Validate input
-    if (!name || !email || !password) {
+    if (!email || (!isResend && (!name || !password))) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -25,24 +25,28 @@ export async function POST(req) {
       );
     }
 
-    // Validate password strength
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(password)) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character' },
-        { status: 400 }
-      );
+    // Only validate password for new registrations
+    if (!isResend) {
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(password)) {
+        return NextResponse.json(
+          { error: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character' },
+          { status: 400 }
+        );
+      }
     }
 
     await connectDB();
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User already exists' },
-        { status: 400 }
-      );
+    // Check if user exists only for new registrations
+    if (!isResend) {
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'User already exists' },
+          { status: 400 }
+        );
+      }
     }
 
     // Generate and store OTP
@@ -64,7 +68,7 @@ export async function POST(req) {
       );
     }
 
-    logger.info(`OTP generated and sent for registration: ${email}`);
+    logger.info(`OTP ${isResend ? 're-sent' : 'generated and sent'} for ${isResend ? 'verification' : 'registration'}: ${email}`);
     return NextResponse.json(
       { message: 'OTP sent successfully' },
       { status: 200 }

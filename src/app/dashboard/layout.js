@@ -54,30 +54,36 @@ function DashboardContent({ children }) {
   const menuItems = [
     {
       name: 'Dashboard',
-      icon: 'solar:widget-5-bold-duotone',
-      path: '/dashboard'
+      path: '/dashboard',
+      icon: 'solar:home-2-bold-duotone'
     },
     {
-      name: 'Documentation',
-      icon: 'solar:document-text-bold-duotone',
-      path: '/dashboard/documentation'
+      name: 'Analytics',
+      path: '/dashboard/analytics',
+      icon: 'solar:chart-2-bold-duotone'
     },
     {
       name: 'Settings',
-      icon: 'solar:settings-bold-duotone',
-      path: '/dashboard/settings'
+      path: '/dashboard/settings',
+      icon: 'solar:settings-bold-duotone'
     }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Overlay */}
-      {isMobileView && isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-gray-800/50 backdrop-blur-sm z-30"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+      {/* Backdrop for mobile */}
+      <AnimatePresence>
+        {isMobileView && isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Mobile Toggle Button */}
       <button
@@ -92,15 +98,14 @@ function DashboardContent({ children }) {
       </button>
 
       {/* Sidebar */}
-      <motion.aside 
+      <motion.aside
         initial={false}
-        animate={{ 
-          x: isSidebarOpen ? 0 : (isMobileView ? -280 : 0),
-          width: isMobileView ? 280 : (isSidebarOpen ? 280 : 80)
+        animate={{
+          width: isSidebarOpen ? (isMobileView ? '280px' : '280px') : '80px',
+          x: isMobileView && !isSidebarOpen ? '-100%' : 0
         }}
         transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-        className={`fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 shadow-sm
-          ${isMobileView ? 'shadow-xl' : ''}`}
+        className="fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 shadow-sm"
       >
         <div className="flex flex-col h-full">
           {/* Logo */}

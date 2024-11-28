@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast'; // Import toast
@@ -32,6 +32,17 @@ export default function LoginModal({ isOpen, onClose }) {
   });
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const otpInputRefs = Array(6).fill(0).map(() => useRef(null));
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const overlayVariants = {
     hidden: { opacity: 0 },
@@ -285,7 +296,9 @@ export default function LoginModal({ isOpen, onClose }) {
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     try {
       const otp = otpDigits.join('');
       if (!otp || otp.length !== 6) {
@@ -384,6 +397,47 @@ export default function LoginModal({ isOpen, onClose }) {
     // Only prevent scrolling, don't prevent default behavior
     if (e.target) {
       e.target.scrollIntoView = () => {};
+    }
+  };
+
+  const handleResendOtp = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (resendTimer > 0) return;
+    
+    try {
+      setLoading(true);
+      setError('');
+      
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          isResend: true
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to resend OTP');
+      }
+
+      // Clear OTP fields
+      setOtpDigits(['', '', '', '', '', '']);
+      // Focus first input
+      otpInputRefs[0].current?.focus();
+      // Set 60 second cooldown
+      setResendTimer(60);
+      toast.success('New OTP sent to your email!');
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      toast.error(error.message || 'Failed to resend OTP');
+      setError(error.message || 'Failed to resend OTP');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -653,11 +707,13 @@ export default function LoginModal({ isOpen, onClose }) {
           className="text-center"
         >
           <button
-            onClick={handleFormSubmit}
-            disabled={loading}
-            className="text-[10px] xs:text-xs sm:text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75 hover:underline"
+            onClick={handleResendOtp}
+            disabled={loading || resendTimer > 0}
+            className="text-[10px] xs:text-xs sm:text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75 hover:underline cursor-pointer disabled:cursor-not-allowed"
           >
-            Didn't receive the code? Resend
+            {resendTimer > 0 
+              ? `Resend code in ${resendTimer}s` 
+              : "Didn't receive the code? Resend"}
           </button>
         </motion.div>
       </div>
@@ -673,7 +729,7 @@ export default function LoginModal({ isOpen, onClose }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
             onClick={onClose}
           />
           <motion.div
@@ -681,9 +737,12 @@ export default function LoginModal({ isOpen, onClose }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-6 overflow-hidden"
+            className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-6 pointer-events-none"
           >
-            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl relative overflow-hidden min-h-[360px] xs:min-h-[400px] sm:min-h-[520px]">
+            <div 
+              className="bg-white w-full max-w-md rounded-2xl shadow-xl relative overflow-hidden min-h-[360px] xs:min-h-[400px] sm:min-h-[520px] pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <AnimatePresence mode="wait" initial={false}>
                 {showOtpScreen ? (
                   renderOtpScreen()
