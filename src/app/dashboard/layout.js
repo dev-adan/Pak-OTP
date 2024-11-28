@@ -1,18 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 
-export default function DashboardLayout({ children }) {
+// Loading component for Suspense
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+    </div>
+  );
+}
+
+function DashboardContent({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   // Handle screen resize
   useEffect(() => {
@@ -31,6 +40,16 @@ export default function DashboardLayout({ children }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // If not authenticated, show loading
+  if (status === "loading") {
+    return <LoadingSpinner />;
+  }
+
+  // If not authenticated, redirect will happen automatically through middleware
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   const menuItems = [
     {
@@ -213,5 +232,13 @@ export default function DashboardLayout({ children }) {
         {children}
       </main>
     </div>
+  );
+}
+
+export default function DashboardLayout({ children }) {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <DashboardContent>{children}</DashboardContent>
+    </Suspense>
   );
 }

@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { Suspense } from 'react';
 import StatCard from '@/components/shared/StatCard';
 import PlanCard from '@/components/shared/PlanCard';
 import TransactionCard from '@/components/shared/TransactionCard';
@@ -62,7 +64,21 @@ const purchaseHistory = [
   }
 ];
 
-export default function Dashboard() {
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center p-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+    </div>
+  );
+}
+
+function DashboardContent() {
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Dashboard Header */}
@@ -71,7 +87,7 @@ export default function Dashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Dashboard
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Welcome back to your OTP management portal</p>
+          <p className="text-gray-500 text-sm mt-1">Welcome back{session?.user?.name ? `, ${session.user.name}` : ''}</p>
           {/* Elegant Gradient Separator */}
           <div className="mt-4">
             <div className="h-1 w-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-transparent rounded-full"></div>
@@ -88,53 +104,65 @@ export default function Dashboard() {
       </div>
 
       {/* Active Plans */}
-      <section className="mb-8">
-        {/* Filter Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
-          <div>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Active Plans</h2>
-            <p className="text-sm text-gray-500 mt-1">Monitor your active subscription plans</p>
+      <Suspense fallback={<LoadingSpinner />}>
+        <section className="mb-8">
+          {/* Filter Bar */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Active Plans</h2>
+              <p className="text-sm text-gray-500 mt-1">Monitor your active subscription plans</p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
+            >
+              <Icon icon="solar:filter-bold-duotone" className="w-4 h-4" />
+              <span className="text-sm font-medium">Filter</span>
+            </motion.button>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
-          >
-            <Icon icon="solar:filter-bold-duotone" className="w-4 h-4" />
-            <span className="text-sm font-medium">Filter</span>
-          </motion.button>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {activePlans.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} />
-          ))}
-        </div>
-      </section>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            {activePlans.map((plan) => (
+              <PlanCard key={plan.id} plan={plan} />
+            ))}
+          </div>
+        </section>
+      </Suspense>
 
       {/* Purchase History */}
-      <section>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
-          <div>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Purchase History</h2>
-            <p className="text-sm text-gray-500 mt-1">Track your recent transactions</p>
+      <Suspense fallback={<LoadingSpinner />}>
+        <section>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Purchase History</h2>
+              <p className="text-sm text-gray-500 mt-1">Track your recent transactions</p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
+            >
+              <Icon icon="solar:filter-bold-duotone" className="w-4 h-4" />
+              <span className="text-sm font-medium">Filter</span>
+            </motion.button>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
-          >
-            <Icon icon="solar:filter-bold-duotone" className="w-4 h-4" />
-            <span className="text-sm font-medium">Filter</span>
-          </motion.button>
-        </div>
 
-        <div className="space-y-4 sm:space-y-5">
-          {purchaseHistory.map((purchase) => (
-            <TransactionCard key={purchase.id} purchase={purchase} />
-          ))}
-        </div>
-      </section>
+          <div className="space-y-4 sm:space-y-5">
+            {purchaseHistory.map((purchase) => (
+              <TransactionCard key={purchase.id} purchase={purchase} />
+            ))}
+          </div>
+        </section>
+      </Suspense>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <DashboardContent />
+    </Suspense>
   );
 }
