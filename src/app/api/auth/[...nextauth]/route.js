@@ -128,6 +128,13 @@ export const authOptions = {
         path: '/',
         secure: true
       }
+    },
+    vercelLiveToken: {
+      name: '__vercel_live_token',
+      options: {
+        sameSite: 'none',
+        secure: true
+      }
     }
   },
   debug: process.env.NODE_ENV === 'development',
