@@ -5,16 +5,10 @@ import OTP from '@/models/OTP';
 
 // Create a transporter using environment variables
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // use SSL
+  service: 'gmail', // Use Gmail service instead of custom host
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  tls: {
-    // do not fail on invalid certs
-    rejectUnauthorized: false
   }
 });
 
@@ -94,23 +88,28 @@ export async function verifyOTP(email, userOTP) {
 
 export async function sendOTPEmail(email, otp) {
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to: email,
       subject: 'Your OTP for Registration',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Verify Your Email</h2>
-          <p>Thank you for registering! Please use the following OTP to complete your registration:</p>
-          <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-            ${otp}
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #4F46E5; text-align: center;">Your OTP Code</h2>
+          <p style="color: #374151; font-size: 16px;">Hello,</p>
+          <p style="color: #374151; font-size: 16px;">Your OTP code for registration is:</p>
+          <div style="background-color: #F3F4F6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4F46E5;">${otp}</span>
           </div>
-          <p>This OTP will expire in 15 minutes.</p>
-          <p style="color: #666; font-size: 12px;">If you didn't request this OTP, please ignore this email.</p>
+          <p style="color: #374151; font-size: 16px;">This code will expire in 15 minutes.</p>
+          <p style="color: #374151; font-size: 16px;">If you didn't request this code, please ignore this email.</p>
+          <div style="margin-top: 30px; text-align: center; color: #6B7280; font-size: 14px;">
+            <p>This is an automated message, please do not reply.</p>
+          </div>
         </div>
-      `,
+      `
     });
-    logger.info(`OTP sent to: ${email}`);
+
+    logger.info(`OTP email sent successfully to ${email}`);
     return true;
   } catch (error) {
     logger.error(`Error sending OTP email: ${error.message}`);
