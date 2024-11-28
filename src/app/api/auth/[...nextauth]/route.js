@@ -115,24 +115,26 @@ export const authOptions = {
       name: `__Secure-next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: 'none',
         path: '/',
         secure: true,
-        domain: 'pak-otp.vercel.app'
+        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : 'localhost'
       }
     },
     callbackUrl: {
       name: `__Secure-next-auth.callback-url`,
       options: {
-        sameSite: 'lax',
+        sameSite: 'none',
         path: '/',
         secure: true
       }
     },
-    vercelLiveToken: {
-      name: '__vercel_live_token',
+    csrfToken: {
+      name: `__Host-next-auth.csrf-token`,
       options: {
+        httpOnly: true,
         sameSite: 'none',
+        path: '/',
         secure: true
       }
     }
