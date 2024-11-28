@@ -160,13 +160,19 @@ export default function LoginModal({ isOpen, onClose }) {
             setError(result.error || 'Login failed. Please try again.');
             toast.error(result.error || 'Login failed. Please try again.');
           }
+          setLoading(false);
           return;
         }
 
+        // Success - handle redirection
         toast.success('Login successful!');
-        router.push('/dashboard');
-        router.refresh();
-        onClose();
+        onClose(); // Close modal first
+        
+        // Add a small delay before navigation to ensure modal is closed
+        setTimeout(() => {
+          router.push('/dashboard');
+          router.refresh();
+        }, 100);
       } else {
         // Handle Sign Up
         const res = await fetch('/api/auth/send-otp', {
@@ -364,7 +370,7 @@ export default function LoginModal({ isOpen, onClose }) {
             id="reset-email"
             value={resetEmail}
             onChange={handleResetEmailChange}
-            className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+            className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
               ${isEmailValid ? 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white' : 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500'}
               outline-none shadow-sm text-gray-900 placeholder-gray-400`}
             placeholder="Enter your email"
@@ -378,7 +384,7 @@ export default function LoginModal({ isOpen, onClose }) {
             whileTap={{ scale: 0.98 }}
             onClick={handleSendCode}
             disabled={!isEmailValid || !resetEmail || loading}
-            className={`w-full py-3 px-4 mt-4 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all
+            className={`w-full py-3 sm:py-2.5 mt-4 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all
               ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
             {loading ? (
@@ -406,7 +412,7 @@ export default function LoginModal({ isOpen, onClose }) {
               id="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+              className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
                 ${passwordError ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
                 outline-none shadow-sm text-gray-900 placeholder-gray-400`}
               placeholder="Enter new password"
@@ -423,7 +429,7 @@ export default function LoginModal({ isOpen, onClose }) {
               id="confirm-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+              className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
                 ${passwordError ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
                 outline-none shadow-sm text-gray-900 placeholder-gray-400`}
               placeholder="Confirm new password"
@@ -436,7 +442,7 @@ export default function LoginModal({ isOpen, onClose }) {
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
-            className={`w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all
+            className={`w-full py-3 sm:py-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all
               ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
             {loading ? (
@@ -477,7 +483,7 @@ export default function LoginModal({ isOpen, onClose }) {
             whileTap={{ scale: 0.98 }}
             onClick={handleVerifyOtp}
             disabled={loading || otpDigits.some(digit => !digit)}
-            className={`w-full py-3 px-4 mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
+            className={`w-full py-3 sm:py-2.5 mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
               ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
             {loading ? (
@@ -587,7 +593,7 @@ export default function LoginModal({ isOpen, onClose }) {
           transition={{ delay: 0.6 }}
           onClick={handleVerifyOtp}
           disabled={loading || otpDigits.some(digit => !digit)}
-          className={`w-full px-4 py-3 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
+          className={`w-full px-4 py-3 sm:py-2.5 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
         >
           {loading ? (
             <div className="flex items-center justify-center">
@@ -717,7 +723,7 @@ export default function LoginModal({ isOpen, onClose }) {
                       transition={{ delay: 0.6 }}
                       onClick={handleVerifyOtp}
                       disabled={loading || otpDigits.some(digit => !digit)}
-                      className={`w-full px-4 py-3 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
+                      className={`w-full px-4 py-3 sm:py-2.5 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
                     >
                       {loading ? (
                         <div className="flex items-center justify-center">
@@ -845,20 +851,18 @@ export default function LoginModal({ isOpen, onClose }) {
                   ) : (
                     <form onSubmit={handleFormSubmit} className="space-y-4">
                       {!isLogin && (
-                        <div>
+                        <div className="mb-4">
                           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                            Name
+                            Full Name
                           </label>
                           <input
                             type="text"
                             id="name"
                             name="name"
-                            value={formData.name || ''}
+                            value={formData.name}
                             onChange={handleInputChange}
-                            className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
-                              ${fieldErrors.name 
-                                ? 'border-2 border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500' 
-                                : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                            className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
+                              ${fieldErrors.name ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
                               outline-none shadow-sm text-gray-900 placeholder-gray-400`}
                             required
                             placeholder="Enter your full name"
@@ -866,9 +870,9 @@ export default function LoginModal({ isOpen, onClose }) {
                         </div>
                       )}
 
-                      <div>
+                      <div className="mb-4">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                          Email
+                          Email Address
                         </label>
                         <input
                           type="email"
@@ -876,17 +880,15 @@ export default function LoginModal({ isOpen, onClose }) {
                           name="email"
                           value={formData.email}
                           onChange={handleInputChange}
-                          className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
-                            ${fieldErrors.email 
-                              ? 'border-2 border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500' 
-                              : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                          className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
+                            ${fieldErrors.email ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
                             outline-none shadow-sm text-gray-900 placeholder-gray-400`}
                           placeholder="Enter your email"
                           required
                         />
                       </div>
 
-                      <div>
+                      <div className="mb-4">
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                           Password
                         </label>
@@ -896,12 +898,10 @@ export default function LoginModal({ isOpen, onClose }) {
                           name="password"
                           value={formData.password}
                           onChange={handleInputChange}
-                          className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
-                            ${fieldErrors.password 
-                              ? 'border-2 border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500' 
-                              : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                          className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
+                            ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
                             outline-none shadow-sm text-gray-900 placeholder-gray-400`}
-                          placeholder={isLogin ? "Enter your password" : "Create a strong password"}
+                          placeholder={isLogin ? "Enter your password" : "Create a password"}
                           required
                         />
                       </div>
@@ -925,10 +925,8 @@ export default function LoginModal({ isOpen, onClose }) {
                           e.preventDefault();
                           handleFormSubmit(e);
                         }}
-                        className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-all duration-200
-                          ${error 
-                            ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
-                            : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'} 
+                        className={`w-full flex justify-center py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
+                          ${error ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : ''} 
                           ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                       >
                         {loading ? (

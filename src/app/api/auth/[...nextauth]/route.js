@@ -114,23 +114,23 @@ export const authOptions = {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/',
-        secure: true
+        secure: process.env.NODE_ENV === 'production'
       }
     }
-  },
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+export const { handlers: { GET, POST } } = { handlers: { GET: handler, POST: handler } };
