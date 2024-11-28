@@ -1,0 +1,136 @@
+2024-11-28 14:49:51:4951 [33mwarn[39m: [33mFailed login attempt for user: adanaligakhar@gmail.com[39m
+2024-11-28 14:49:51:4951 [31merror[39m: [31mAuthentication error: Invalid password[39m
+2024-11-28 14:50:04:504 [32minfo[39m: [32mSuccessful login for user: paka@gmail.com[39m
+2024-11-28 14:58:04:584 [31merror[39m: [31mError sending OTP email: self-signed certificate in certificate chain[39m
+2024-11-28 14:58:33:5833 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 14:58:36:5836 [32minfo[39m: [32mOTP sent to: saif@nospam.today[39m
+2024-11-28 14:58:36:5836 [32minfo[39m: [32mOTP generated and sent for registration: saif@nospam.today[39m
+2024-11-28 15:01:16:116 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:01:18:118 [32minfo[39m: [32mOTP sent to: adan@nospam.today[39m
+2024-11-28 15:01:18:118 [32minfo[39m: [32mOTP generated and sent for registration: adan@nospam.today[39m
+2024-11-28 15:01:52:152 [33mwarn[39m: [33mInvalid OTP attempt for: adan@nospam.today[39m
+2024-11-28 15:01:54:154 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:03:34:334 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:03:45:345 [32minfo[39m: [32mOTP sent to: adan@nospam.today[39m
+2024-11-28 15:03:45:345 [32minfo[39m: [32mOTP generated and sent for registration: adan@nospam.today[39m
+2024-11-28 15:04:17:417 [33mwarn[39m: [33mInvalid OTP attempt for: adan@nospam.today[39m
+2024-11-28 15:04:19:419 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:04:26:426 [33mwarn[39m: [33mInvalid OTP attempt for: adan@nospam.today[39m
+2024-11-28 15:04:26:426 [33mwarn[39m: [33mInvalid OTP attempt for: adan@nospam.today[39m
+2024-11-28 15:05:27:527 [33mwarn[39m: [33mInvalid OTP attempt for: adan@nospam.today[39m
+2024-11-28 15:05:28:528 [33mwarn[39m: [33mInvalid OTP attempt for: adan@nospam.today[39m
+2024-11-28 15:05:29:529 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:06:14:614 [33mwarn[39m: [33mInvalid OTP attempt for: adan@nospam.today[39m
+2024-11-28 15:06:14:614 [32minfo[39m: [32mVerifying OTP for email: adan@nospam.today, Provided OTP: 225177[39m
+2024-11-28 15:06:14:614 [33mwarn[39m: [33mNo OTP found for email: adan@nospam.today[39m
+2024-11-28 15:06:16:616 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:12:23:1223 [32minfo[39m: [32mOTP stored for email: adan@nospam.today, OTP: 983124[39m
+2024-11-28 15:12:25:1225 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:12:28:1228 [32minfo[39m: [32mOTP sent to: adan@nospam.today[39m
+2024-11-28 15:12:28:1228 [32minfo[39m: [32mOTP generated and sent for registration: adan@nospam.today[39m
+2024-11-28 15:12:49:1249 [32minfo[39m: [32mReceived OTP verification request for email: adan@nospam.today, OTP: 225177[39m
+2024-11-28 15:12:49:1249 [32minfo[39m: [32mVerifying OTP: 225177 for email: adan@nospam.today[39m
+2024-11-28 15:12:49:1249 [32minfo[39m: [32mVerifying OTP for email: adan@nospam.today, Provided OTP: 225177[39m
+2024-11-28 15:12:49:1249 [32minfo[39m: [32mFound OTP document: {"_id":"67484207d964d2c153ebdea5","email":"adan@nospam.today","otp":"983124","createdAt":"2024-11-28T10:12:23.833Z","__v":0}[39m
+2024-11-28 15:12:49:1249 [33mwarn[39m: [33mInvalid OTP attempt for adan@nospam.today. Expected: 983124, Received: 225177[39m
+2024-11-28 15:12:49:1249 [33mwarn[39m: [33mOTP verification failed: Invalid OTP[39m
+2024-11-28 15:12:51:1251 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:13:10:1310 [32minfo[39m: [32mReceived OTP verification request for email: adan@nospam.today, OTP: 983124[39m
+2024-11-28 15:13:10:1310 [32minfo[39m: [32mVerifying OTP: 983124 for email: adan@nospam.today[39m
+2024-11-28 15:13:10:1310 [32minfo[39m: [32mVerifying OTP for email: adan@nospam.today, Provided OTP: 983124[39m
+2024-11-28 15:13:10:1310 [32minfo[39m: [32mFound OTP document: {"_id":"67484207d964d2c153ebdea5","email":"adan@nospam.today","otp":"983124","createdAt":"2024-11-28T10:12:23.833Z","__v":0}[39m
+2024-11-28 15:13:10:1310 [32minfo[39m: [32mOTP verified successfully for email: adan@nospam.today[39m
+2024-11-28 15:13:10:1310 [32minfo[39m: [32mOTP verification successful for email: adan@nospam.today[39m
+2024-11-28 15:13:10:1310 [31merror[39m: [31mError in verify-otp: User validation failed: email: Please provide a valid email[39m
+2024-11-28 15:14:13:1413 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:16:51:1651 [32minfo[39m: [32mOTP stored for email: programmingbackup@gmail.com, OTP: 680985[39m
+2024-11-28 15:16:56:1656 [32minfo[39m: [32mOTP sent to: programmingbackup@gmail.com[39m
+2024-11-28 15:16:56:1656 [32minfo[39m: [32mOTP generated and sent for registration: programmingbackup@gmail.com[39m
+2024-11-28 15:17:28:1728 [32minfo[39m: [32mReceived OTP verification request for email: programmingbackup@gmail.com, OTP: 680985[39m
+2024-11-28 15:17:28:1728 [32minfo[39m: [32mVerifying OTP: 680985 for email: programmingbackup@gmail.com[39m
+2024-11-28 15:17:28:1728 [32minfo[39m: [32mVerifying OTP for email: programmingbackup@gmail.com, Provided OTP: 680985[39m
+2024-11-28 15:17:28:1728 [32minfo[39m: [32mFound OTP document: {"_id":"67484313d964d2c153ebdeaf","email":"programmingbackup@gmail.com","otp":"680985","createdAt":"2024-11-28T10:16:51.892Z","__v":0}[39m
+2024-11-28 15:17:29:1729 [32minfo[39m: [32mOTP verified successfully for email: programmingbackup@gmail.com[39m
+2024-11-28 15:17:29:1729 [32minfo[39m: [32mOTP verification successful for email: programmingbackup@gmail.com[39m
+2024-11-28 15:17:29:1729 [32minfo[39m: [32mNew user registered after OTP verification: programmingbackup@gmail.com[39m
+2024-11-28 15:21:10:2110 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:21:10:2110 [32minfo[39m: [32mOTP stored for email: adanaligakhar@gmail.com, OTP: 787635[39m
+2024-11-28 15:21:13:2113 [32minfo[39m: [32mOTP sent to: adanaligakhar@gmail.com[39m
+2024-11-28 15:21:13:2113 [32minfo[39m: [32mOTP generated and sent for registration: adanaligakhar@gmail.com[39m
+2024-11-28 15:21:33:2133 [32minfo[39m: [32mReceived OTP verification request for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:21:33:2133 [32minfo[39m: [32mVerifying OTP: 787634 for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:21:33:2133 [32minfo[39m: [32mVerifying OTP for email: adanaligakhar@gmail.com, Provided OTP: 787634[39m
+2024-11-28 15:21:33:2133 [32minfo[39m: [32mFound OTP document: {"_id":"67484416d964d2c153ebdeb8","email":"adanaligakhar@gmail.com","otp":"787635","createdAt":"2024-11-28T10:21:10.599Z","__v":0}[39m
+2024-11-28 15:21:33:2133 [33mwarn[39m: [33mInvalid OTP attempt for adanaligakhar@gmail.com. Expected: 787635, Received: 787634[39m
+2024-11-28 15:21:33:2133 [33mwarn[39m: [33mOTP verification failed: Invalid OTP[39m
+2024-11-28 15:21:35:2135 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:21:39:2139 [32minfo[39m: [32mReceived OTP verification request for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:21:39:2139 [32minfo[39m: [32mVerifying OTP: 787635 for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:21:39:2139 [32minfo[39m: [32mVerifying OTP for email: adanaligakhar@gmail.com, Provided OTP: 787635[39m
+2024-11-28 15:21:39:2139 [32minfo[39m: [32mFound OTP document: {"_id":"67484416d964d2c153ebdeb8","email":"adanaligakhar@gmail.com","otp":"787635","createdAt":"2024-11-28T10:21:10.599Z","__v":0}[39m
+2024-11-28 15:21:39:2139 [32minfo[39m: [32mOTP verified successfully for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:21:39:2139 [32minfo[39m: [32mUser created successfully: adanaligakhar@gmail.com[39m
+2024-11-28 15:21:40:2140 [32minfo[39m: [32mSuccessful login for user: adanaligakhar@gmail.com[39m
+2024-11-28 15:37:20:3720 [32minfo[39m: [32mOTP stored for email: adan@nospam.today, OTP: 184476[39m
+2024-11-28 15:37:21:3721 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:37:22:3722 [32minfo[39m: [32mOTP sent to: adan@nospam.today[39m
+2024-11-28 15:37:22:3722 [32minfo[39m: [32mOTP generated and sent for registration: adan@nospam.today[39m
+2024-11-28 15:40:31:4031 [32minfo[39m: [32mOTP stored for email: adan@nospam.today, OTP: 474584[39m
+2024-11-28 15:40:32:4032 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:40:34:4034 [32minfo[39m: [32mOTP sent to: adan@nospam.today[39m
+2024-11-28 15:40:34:4034 [32minfo[39m: [32mOTP generated and sent for registration: adan@nospam.today[39m
+2024-11-28 15:42:32:4232 [32minfo[39m: [32mOTP stored for email: adan@nospam.today, OTP: 258504[39m
+2024-11-28 15:42:33:4233 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:42:35:4235 [32minfo[39m: [32mOTP sent to: adan@nospam.today[39m
+2024-11-28 15:42:35:4235 [32minfo[39m: [32mOTP generated and sent for registration: adan@nospam.today[39m
+2024-11-28 15:45:11:4511 [32minfo[39m: [32mReceived OTP verification request for email: adan@nospam.today[39m
+2024-11-28 15:45:11:4511 [32minfo[39m: [32mVerifying OTP: 258504 for email: adan@nospam.today[39m
+2024-11-28 15:45:11:4511 [32minfo[39m: [32mVerifying OTP for email: adan@nospam.today, Provided OTP: 258504[39m
+2024-11-28 15:45:11:4511 [32minfo[39m: [32mFound OTP document: {"_id":"67484918d964d2c153ebdecb","email":"adan@nospam.today","otp":"258504","createdAt":"2024-11-28T10:42:32.350Z","__v":0}[39m
+2024-11-28 15:45:12:4512 [32minfo[39m: [32mOTP verified successfully for email: adan@nospam.today[39m
+2024-11-28 15:45:12:4512 [31merror[39m: [31mError in OTP verification: User validation failed: email: Please provide a valid email[39m
+2024-11-28 15:45:12:4512 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:46:16:4616 [32minfo[39m: [32mReceived OTP verification request for email: adan@nospam.today[39m
+2024-11-28 15:46:16:4616 [32minfo[39m: [32mVerifying OTP: 258504 for email: adan@nospam.today[39m
+2024-11-28 15:46:16:4616 [32minfo[39m: [32mVerifying OTP for email: adan@nospam.today, Provided OTP: 258504[39m
+2024-11-28 15:46:17:4617 [33mwarn[39m: [33mNo OTP found for email: adan@nospam.today[39m
+2024-11-28 15:46:17:4617 [33mwarn[39m: [33mOTP verification failed: No OTP found for this email[39m
+2024-11-28 15:46:18:4618 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:46:59:4659 [32minfo[39m: [32mOTP stored for email: adanaligakhar@gmail.com, OTP: 610006[39m
+2024-11-28 15:47:00:470 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:47:03:473 [32minfo[39m: [32mOTP sent to: adanaligakhar@gmail.com[39m
+2024-11-28 15:47:03:473 [32minfo[39m: [32mOTP generated and sent for registration: adanaligakhar@gmail.com[39m
+2024-11-28 15:47:23:4723 [32minfo[39m: [32mReceived OTP verification request for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:47:23:4723 [32minfo[39m: [32mVerifying OTP: 610006 for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:47:23:4723 [32minfo[39m: [32mVerifying OTP for email: adanaligakhar@gmail.com, Provided OTP: 610006[39m
+2024-11-28 15:47:23:4723 [32minfo[39m: [32mFound OTP document: {"_id":"67484a22d964d2c153ebded4","email":"adanaligakhar@gmail.com","otp":"610006","createdAt":"2024-11-28T10:46:58.982Z","__v":0}[39m
+2024-11-28 15:47:23:4723 [32minfo[39m: [32mOTP verified successfully for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:47:23:4723 [32minfo[39m: [32mUser created successfully: adanaligakhar@gmail.com[39m
+2024-11-28 15:47:25:4725 [32minfo[39m: [32mSuccessful login for user: adanaligakhar@gmail.com[39m
+2024-11-28 15:47:58:4758 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:48:01:481 [32minfo[39m: [32mOTP stored for email: adan@nopak.pk, OTP: 483476[39m
+2024-11-28 15:48:05:485 [32minfo[39m: [32mOTP sent to: adan@nopak.pk[39m
+2024-11-28 15:48:05:485 [32minfo[39m: [32mOTP generated and sent for registration: adan@nopak.pk[39m
+2024-11-28 15:49:47:4947 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:49:50:4950 [32minfo[39m: [32mOTP stored for email: adanaligakhar@gmail.com, OTP: 252251[39m
+2024-11-28 15:49:54:4954 [32minfo[39m: [32mOTP sent to: adanaligakhar@gmail.com[39m
+2024-11-28 15:49:54:4954 [32minfo[39m: [32mOTP generated and sent for registration: adanaligakhar@gmail.com[39m
+2024-11-28 15:50:11:5011 [32minfo[39m: [32mReceived OTP verification request for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:50:11:5011 [32minfo[39m: [32mVerifying OTP: 252250 for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:50:11:5011 [32minfo[39m: [32mVerifying OTP for email: adanaligakhar@gmail.com, Provided OTP: 252250[39m
+2024-11-28 15:50:11:5011 [32minfo[39m: [32mFound OTP document: {"_id":"67484aced964d2c153ebdee2","email":"adanaligakhar@gmail.com","otp":"252251","createdAt":"2024-11-28T10:49:50.218Z","__v":0}[39m
+2024-11-28 15:50:11:5011 [33mwarn[39m: [33mInvalid OTP attempt for adanaligakhar@gmail.com. Expected: 252251, Received: 252250[39m
+2024-11-28 15:50:11:5011 [33mwarn[39m: [33mOTP verification failed: Invalid OTP[39m
+2024-11-28 15:50:13:5013 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:50:14:5014 [32minfo[39m: [32mReceived OTP verification request for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:50:14:5014 [32minfo[39m: [32mVerifying OTP: 252250 for email: adanaligakhar@gmail.com[39m
+2024-11-28 15:50:14:5014 [32minfo[39m: [32mVerifying OTP for email: adanaligakhar@gmail.com, Provided OTP: 252250[39m
+2024-11-28 15:50:14:5014 [32minfo[39m: [32mFound OTP document: {"_id":"67484aced964d2c153ebdee2","email":"adanaligakhar@gmail.com","otp":"252251","createdAt":"2024-11-28T10:49:50.218Z","__v":0}[39m
+2024-11-28 15:50:14:5014 [33mwarn[39m: [33mInvalid OTP attempt for adanaligakhar@gmail.com. Expected: 252251, Received: 252250[39m
+2024-11-28 15:50:14:5014 [33mwarn[39m: [33mOTP verification failed: Invalid OTP[39m
+2024-11-28 15:53:15:5315 [32minfo[39m: [32mOTP stored for email: adanaligakhar@gmail.com, OTP: 482454[39m
+2024-11-28 15:53:16:5316 [32minfo[39m: [32mSMTP server is ready to send emails[39m
+2024-11-28 15:53:19:5319 [32minfo[39m: [32mOTP sent to: adanaligakhar@gmail.com[39m
+2024-11-28 15:53:19:5319 [32minfo[39m: [32mOTP generated and sent for registration: adanaligakhar@gmail.com[39m
+2024-11-28 15:55:47:5547 [33mwarn[39m: [33mLogin attempt with non-existent email: asdasd@gmail.com[39m
+2024-11-28 15:55:47:5547 [31merror[39m: [31mAuthentication error: No user found with this email[39m

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import { logger } from '@/lib/logger';
 
 export async function POST(req) {
   try {
@@ -33,6 +34,15 @@ export async function POST(req) {
       );
     }
 
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character' },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
     // Check if user already exists
@@ -55,6 +65,8 @@ export async function POST(req) {
       role: 'user'
     });
 
+    logger.info(`New user registered: ${email}`);
+
     // Remove password from response
     const userWithoutPassword = {
       id: user._id.toString(),
@@ -68,6 +80,7 @@ export async function POST(req) {
       { status: 201 }
     );
   } catch (error) {
+    logger.error(`Registration error: ${error.message}`);
     console.error('Registration error:', error);
     // Check if it's a MongoDB validation error
     if (error.name === 'ValidationError') {

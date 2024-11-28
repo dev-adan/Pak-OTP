@@ -4,6 +4,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import { logger } from '@/lib/logger';
 
 export const authOptions = {
   providers: [
@@ -18,32 +19,41 @@ export const authOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Please provide both email and password');
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            logger.warn('Login attempt without email or password');
+            throw new Error('Please provide both email and password');
+          }
+
+          await connectDB();
+
+          // Find user by email
+          const user = await User.findOne({ email: credentials.email }).select('+password');
+          
+          if (!user) {
+            logger.warn(`Login attempt with non-existent email: ${credentials.email}`);
+            throw new Error('No user found with this email');
+          }
+
+          // Check password
+          const isPasswordMatch = await bcrypt.compare(credentials.password, user.password);
+          
+          if (!isPasswordMatch) {
+            logger.warn(`Failed login attempt for user: ${credentials.email}`);
+            throw new Error('Invalid password');
+          }
+
+          logger.info(`Successful login for user: ${credentials.email}`);
+          return {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          logger.error(`Authentication error: ${error.message}`);
+          throw error;
         }
-
-        await connectDB();
-
-        // Find user by email
-        const user = await User.findOne({ email: credentials.email }).select('+password');
-        
-        if (!user) {
-          throw new Error('No user found with this email');
-        }
-
-        // Check password
-        const isPasswordMatch = await bcrypt.compare(credentials.password, user.password);
-        
-        if (!isPasswordMatch) {
-          throw new Error('Invalid password');
-        }
-
-        return {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       }
     })
   ],
@@ -65,11 +75,13 @@ export const authOptions = {
               // For Google auth users, we don't store password
               password: await bcrypt.hash(Math.random().toString(36), 12)
             });
+            logger.info(`New user created via Google OAuth: ${user.email}`);
             return true;
           }
+          logger.info(`Successful Google OAuth login for user: ${user.email}`);
           return true;
         } catch (error) {
-          console.error('Error during Google sign in:', error);
+          logger.error(`Google OAuth error: ${error.message}`);
           return false;
         }
       }
