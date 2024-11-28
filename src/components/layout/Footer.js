@@ -1,10 +1,57 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
+import { useState } from 'react';
 
 export default function Footer() {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Subscription failed. Please try again.');
+        setTimeout(() => {
+          setError('');
+        }, 5000);
+        return;
+      }
+
+      setShowSuccess(true);
+      setEmail('');
+      
+      // Hide success message after 5 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 5000);
+    } catch (err) {
+      setError('Failed to connect to the server. Please try again later.');
+      setTimeout(() => {
+        setError('');
+      }, 5000);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const footerLinks = [
     {
       title: 'Product',
@@ -133,29 +180,95 @@ export default function Footer() {
             <p className="text-sm text-gray-500">
               Subscribe to our newsletter for the latest updates and security insights.
             </p>
-            <form className="mt-4 sm:flex sm:max-w-md">
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
-              <input
-                type="email"
-                name="email-address"
-                id="email-address"
-                autoComplete="email"
-                required
-                className="w-full min-w-0 px-4 py-2 text-base text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
-                placeholder="Enter your email"
-              />
-              <div className="mt-3 sm:mt-0 sm:ml-3 sm:flex-shrink-0">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  className="w-full flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
-                >
-                  Subscribe
-                </motion.button>
+            <form onSubmit={handleSubmit} className="mt-4 flex flex-col sm:flex-row gap-3 sm:gap-2 w-full">
+              <div className="flex-1 min-w-[300px]">
+                <label htmlFor="email-address" className="sr-only">
+                  Email address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Icon icon="material-symbols:mail-outline" className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    name="email-address"
+                    id="email-address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    disabled={isSubmitting}
+                    className="block w-full pl-10 pr-4 py-2.5 text-gray-900 placeholder-gray-500 bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="Enter your email"
+                  />
+                  
+                  {/* Error message */}
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute -bottom-8 left-0 right-0 text-center text-red-500 text-sm"
+                      >
+                        {error}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  {/* Success animation */}
+                  <AnimatePresence>
+                    {showSuccess && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute inset-0 flex items-center justify-center bg-white/95 backdrop-blur-sm rounded-xl border border-green-200"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          className="flex items-center space-x-2 text-green-600"
+                        >
+                          <motion.div
+                            initial={{ rotate: -90 }}
+                            animate={{ rotate: 0 }}
+                            transition={{ type: "spring", damping: 10 }}
+                          >
+                            <Icon icon="material-symbols:check-circle" className="w-5 h-5" />
+                          </motion.div>
+                          <span className="text-sm font-medium">Thanks for subscribing!</span>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={isSubmitting}
+                className={`inline-flex items-center justify-center px-6 py-2.5 border border-transparent text-sm font-medium rounded-xl text-white shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap ${
+                  isSubmitting 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700'
+                }`}
+              >
+                {isSubmitting ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                  />
+                ) : (
+                  <>
+                    <Icon icon="material-symbols:send" className="w-4 h-4 mr-2" />
+                    Subscribe
+                  </>
+                )}
+              </motion.button>
             </form>
           </motion.div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Icon } from '@iconify/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({
@@ -35,7 +36,8 @@ export default function ContactUs() {
       }
 
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      // Keep success message visible for longer to show the animation
+      setTimeout(() => setShowSuccess(false), 5000);
       setFormData({ name: '', email: '', phone: '', message: '' });
     } catch (error) {
       console.error('Error:', error);
@@ -145,14 +147,68 @@ export default function ContactUs() {
           {/* Contact Form */}
           <div className="relative">
             <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 relative overflow-hidden">
-              {/* Success Message */}
-              <div
-                className={`absolute top-4 left-4 right-4 bg-green-50 text-green-600 px-4 py-2 rounded-lg transition-opacity duration-200 ${
-                  showSuccess ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                }`}
-              >
-                Message sent successfully!
-              </div>
+              {/* Success Message with Celebration */}
+              <AnimatePresence>
+                {showSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm z-10 p-6"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", damping: 8 }}
+                      className="w-24 h-24 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mb-4"
+                    >
+                      <Icon icon="mdi:check-bold" className="w-12 h-12 text-white" />
+                    </motion.div>
+                    
+                    {/* Confetti effect */}
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ 
+                          opacity: 1,
+                          scale: 0,
+                          x: 0,
+                          y: 0
+                        }}
+                        animate={{ 
+                          opacity: 0,
+                          scale: 1,
+                          x: (Math.random() - 0.5) * 200,
+                          y: (Math.random() - 0.5) * 200,
+                          rotate: Math.random() * 360
+                        }}
+                        transition={{ duration: 1, delay: i * 0.1 }}
+                        className={`absolute w-3 h-3 rounded-full ${
+                          ['bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-blue-500'][i % 4]
+                        }`}
+                      />
+                    ))}
+
+                    <motion.h3
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-2xl font-bold text-gray-900 mb-2 text-center"
+                    >
+                      Thank You! 🎉
+                    </motion.h3>
+                    
+                    <motion.p
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-gray-600 text-center max-w-sm"
+                    >
+                      Your message has been received! We'll be in touch within 24 hours. Looking forward to connecting with you!
+                    </motion.p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Error Message */}
               {error && (
