@@ -881,12 +881,12 @@ export default function LoginModal({ isOpen, onClose }) {
                       )}
 
                       <div className="mb-4">
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                        <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
                           Email Address
                         </label>
                         <input
                           type="email"
-                          id="email"
+                          id="login-email"
                           name="email"
                           value={formData.email}
                           onChange={handleInputChange}

@@ -20,6 +20,21 @@ export default function Navbar({ onLoginClick }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      // First, cancel any pending requests or cleanup
+      await Promise.resolve(); // Allow any pending state updates to complete
+      
+      // Then sign out with a redirect
+      await signOut({ 
+        redirect: true,
+        callbackUrl: '/'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   const scrollToSection = (sectionId, e) => {
     if (e) e.preventDefault();
     
@@ -81,7 +96,7 @@ export default function Navbar({ onLoginClick }) {
                   Dashboard
                 </Link>
                 <button
-                  onClick={() => signOut()}
+                  onClick={handleLogout}
                   className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 space-x-2"
                 >
                   <span>Logout</span>
@@ -163,7 +178,7 @@ export default function Navbar({ onLoginClick }) {
                     Dashboard
                   </Link>
                   <button
-                    onClick={() => signOut()}
+                    onClick={handleLogout}
                     className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 space-x-2"
                   >
                     <span>Logout</span>

@@ -219,13 +219,13 @@ export default function ContactUs() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
                       Your Name
                     </label>
                     <input
                       type="text"
+                      id="contact-name"
                       name="name"
-                      id="name"
                       value={formData.name}
                       onChange={handleChange}
                       required
@@ -234,13 +234,13 @@ export default function ContactUs() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700 mb-1">
                       Email Address
                     </label>
                     <input
                       type="email"
+                      id="contact-email"
                       name="email"
-                      id="email"
                       value={formData.email}
                       onChange={handleChange}
                       required
