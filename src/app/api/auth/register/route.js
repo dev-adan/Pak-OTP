@@ -16,6 +16,23 @@ export async function POST(req) {
       );
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long' },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
     // Check if user already exists
@@ -35,6 +52,7 @@ export async function POST(req) {
       name,
       email,
       password: hashedPassword,
+      role: 'user'
     });
 
     // Remove password from response
@@ -42,6 +60,7 @@ export async function POST(req) {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
+      role: user.role
     };
 
     return NextResponse.json(
@@ -50,8 +69,22 @@ export async function POST(req) {
     );
   } catch (error) {
     console.error('Registration error:', error);
+    // Check if it's a MongoDB validation error
+    if (error.name === 'ValidationError') {
+      return NextResponse.json(
+        { error: Object.values(error.errors).map(err => err.message).join(', ') },
+        { status: 400 }
+      );
+    }
+    // Check if it's a MongoDB duplicate key error
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { error: 'Email already exists' },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Error creating user' },
+      { error: 'Error creating user. Please try again.' },
       { status: 500 }
     );
   }

@@ -60,11 +60,19 @@ export default function TransactionCard({ purchase }) {
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex items-center text-gray-500">
                       <Icon icon="solar:calendar-bold-duotone" className="w-4 h-4 mr-1.5 text-indigo-500/70" />
-                      {new Date(purchase.date).toLocaleDateString()}
+                      {new Date(purchase.date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                      })}
                     </div>
                     <div className="flex items-center text-gray-500">
                       <Icon icon="solar:clock-circle-bold-duotone" className="w-4 h-4 mr-1.5 text-indigo-500/70" />
-                      {new Date(purchase.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(purchase.date).toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                      }).toUpperCase()}
                     </div>
                   </div>
                 </div>

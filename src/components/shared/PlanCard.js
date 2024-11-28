@@ -71,7 +71,11 @@ export default function PlanCard({ plan }) {
                 </div>
                 <div className="flex items-center text-sm text-gray-500">
                   <Icon icon="solar:calendar-bold-duotone" className="w-4 h-4 mr-1.5 text-gray-400" />
-                  Expires {new Date(plan.endDate).toLocaleDateString()}
+                  Expires {new Date(plan.endDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  })}
                 </div>
               </div>
 
