@@ -7,11 +7,15 @@ export function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
 
+  // Get the host from the request
+  const host = request.headers.get('host') || '';
+  const origin = host.includes('localhost') ? 'http://localhost:3000' : `https://${host}`;
+
   // Add CORS headers
   response.headers.set('Access-Control-Allow-Credentials', 'true');
-  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Origin', origin);
   response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', '*');
+  response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 
   // Return modified response
   return response;
@@ -22,12 +26,9 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except:
-     * 1. /api/auth/* (authentication routes)
-     * 2. /_next/* (Next.js internals)
-     * 3. /fonts/* (inside public directory)
-     * 4. /examples/* (inside public directory)
-     * 5. /favicon.ico, /sitemap.xml (public files)
+     * 1. /_next/* (Next.js internals)
+     * 2. /favicon.ico (public files)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

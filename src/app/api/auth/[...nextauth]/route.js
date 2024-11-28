@@ -54,10 +54,8 @@ const handler = NextAuth({
   ],
   pages: {
     signIn: '/auth/signin',
-    signOut: '/auth/signout',
+    signOut: '/',
     error: '/auth/error',
-    verifyRequest: '/auth/verify-request',
-    newUser: '/auth/new-user'
   },
   session: {
     strategy: "jwt",
@@ -65,34 +63,30 @@ const handler = NextAuth({
   },
   cookies: {
     sessionToken: {
-      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      name: 'next-auth.session-token',
       options: {
         httpOnly: true,
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/',
-        secure: true,
-        domain: process.env.VERCEL_URL ? '.vercel.app' : undefined
-      }
-    },
-    callbackUrl: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
-      options: {
-        sameSite: 'none',
-        path: '/',
-        secure: true
-      }
-    },
-    csrfToken: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'none',
-        path: '/',
-        secure: true
+        secure: process.env.NODE_ENV === 'production'
       }
     }
   },
   callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role;
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.role = token.role;
+        session.user.id = token.id;
+      }
+      return session;
+    },
     async signIn({ user, account, profile }) {
       if (account?.provider === 'google') {
         try {
@@ -116,33 +110,17 @@ const handler = NextAuth({
         }
       }
       return true;
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-        token.id = user.id;
-        token.name = user.name;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.role = token.role;
-        session.user.id = token.id;
-        session.user.name = token.name;
-      }
-      return session;
     }
   },
   events: {
-    async signIn({ user, account, profile }) {
-      logger.info(`User signed in: ${user.email}`);
+    async signIn(message) {
+      logger.info(`User signed in: ${message.user.email}`);
     },
-    async signOut({ session, token }) {
-      logger.info(`User signed out: ${session?.user?.email}`);
+    async signOut(message) {
+      logger.info(`User signed out: ${message.session?.user?.email}`);
     },
-    async error(error) {
-      logger.error(`Authentication error: ${error.message}`);
+    async error(message) {
+      logger.error(`Authentication error: ${message}`);
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
