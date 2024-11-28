@@ -30,8 +30,12 @@ const nextConfig = {
             value: 'strict-origin-when-cross-origin'
           },
           {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true'
+          },
+          {
             key: 'Access-Control-Allow-Origin',
-            value: '*'
+            value: process.env.NODE_ENV === 'production' ? 'https://pak-otp.vercel.app' : 'http://localhost:3000'
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -39,19 +43,34 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: '*'
+            value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
           }
         ]
       }
     ];
   },
+  images: {
+    domains: ['lh3.googleusercontent.com'],
+  },
   experimental: {
-    serverActions: true
+    serverActions: true,
   },
   reactStrictMode: true,
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production'
-  }
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  webpack: (config, { isServer }) => {
+    // Fix for the Vercel live token issue
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
