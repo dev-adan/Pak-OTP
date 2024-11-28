@@ -6,7 +6,7 @@ import User from '@/models/User';
 
 export async function POST(req) {
   try {
-    const { email, otp, isReset } = await req.json();
+    const { email, otp, name, password, isReset } = await req.json();
     
     logger.info(`Received OTP verification request for email: ${email}, type: ${isReset ? 'reset' : 'registration'}`);
 
@@ -15,6 +15,28 @@ export async function POST(req) {
         { error: 'Email and OTP are required' },
         { status: 400 }
       );
+    }
+
+    // For registration, validate name and password
+    if (!isReset) {
+      if (!name) {
+        return NextResponse.json(
+          { error: 'Name is required' },
+          { status: 400 }
+        );
+      }
+      if (!password) {
+        return NextResponse.json(
+          { error: 'Password is required' },
+          { status: 400 }
+        );
+      }
+      if (password.length < 8) {
+        return NextResponse.json(
+          { error: 'Password must be at least 8 characters long' },
+          { status: 400 }
+        );
+      }
     }
 
     // Join OTP digits if it's an array
@@ -55,7 +77,7 @@ export async function POST(req) {
       );
     }
 
-    // For registration, check if user exists and create new user
+    // For registration, check if user exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return NextResponse.json(
@@ -64,12 +86,11 @@ export async function POST(req) {
       );
     }
 
-    // Create new user - password will be hashed by the pre-save middleware
-    const { name, password } = await req.json();
+    // Create new user - let the User model handle password hashing
     const newUser = await User.create({
       name,
       email: email.toLowerCase(),
-      password, // Raw password - will be hashed by pre-save middleware
+      password: password, // Pass raw password, let User model hash it
       role: 'user'
     });
 

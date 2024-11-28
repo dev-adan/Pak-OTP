@@ -102,16 +102,17 @@ function DashboardContent({ children }) {
         initial={false}
         animate={{
           width: isSidebarOpen ? (isMobileView ? '280px' : '280px') : '80px',
-          x: isMobileView && !isSidebarOpen ? '-100%' : 0
+          x: isMobileView && !isSidebarOpen ? '-100%' : 0,
+          opacity: isMobileView && !isSidebarOpen ? 0 : 1
         }}
         transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-        className="fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 shadow-sm"
+        className={`fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 shadow-sm ${isMobileView && !isSidebarOpen ? 'pointer-events-none' : ''}`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-4">
             <Link href="/" className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center w-full' : 'space-x-3'}`}>
-              <div className="w-10 h-10 relative flex-shrink-0">
+              <div className={`w-10 h-10 relative flex-shrink-0 ${isMobileView && !isSidebarOpen ? 'hidden' : ''}`}>
                 <svg viewBox="0 0 100 100" className="w-full h-full">
                   <path
                     d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
@@ -124,7 +125,7 @@ function DashboardContent({ children }) {
                 </svg>
               </div>
               {(isSidebarOpen || isMobileView) && (
-                <div className="flex flex-col">
+                <div className={`flex flex-col ${isMobileView && !isSidebarOpen ? 'hidden' : ''}`}>
                   <span className="text-lg font-bold text-indigo-600 leading-none">Pak-OTP</span>
                   <span className="text-xs text-gray-500">Secure Authentication</span>
                 </div>
@@ -163,7 +164,7 @@ function DashboardContent({ children }) {
                     className={`w-6 h-6 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`} 
                   />
                   {(isSidebarOpen || isMobileView) && (
-                    <span className="ml-3 font-medium">
+                    <span className={`ml-3 font-medium ${isMobileView && !isSidebarOpen ? 'hidden' : ''}`}>
                       {item.name}
                     </span>
                   )}
@@ -173,7 +174,7 @@ function DashboardContent({ children }) {
           </nav>
 
           {/* Profile Section */}
-          <div className={`relative border-t border-gray-100 p-4 ${!isSidebarOpen && !isMobileView ? 'px-2' : 'px-3'}`}>
+          <div className={`relative border-t border-gray-100 p-4 ${!isSidebarOpen && !isMobileView ? 'px-2' : 'px-3'} ${isMobileView && !isSidebarOpen ? 'hidden' : ''}`}>
             <div 
               className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center' : 'justify-between'} cursor-pointer`}
               onClick={() => setIsProfileOpen(!isProfileOpen)}

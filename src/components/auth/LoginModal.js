@@ -119,8 +119,11 @@ export default function LoginModal({ isOpen, onClose }) {
   };
 
   const validatePassword = (password) => {
-    if (!password || password.length < 6) {
-      return 'Password must be at least 6 characters long';
+    if (!password) {
+      return 'Password is required';
+    }
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters long';
     }
     // Add more password requirements if needed
     return null;
@@ -354,7 +357,7 @@ export default function LoginModal({ isOpen, onClose }) {
       // Log in the user after successful verification
       const result = await signIn('credentials', {
         email: formData.email.toLowerCase(), // Ensure email is lowercase
-        password: formData.password,
+        password: formData.password, // Use the original password
         redirect: false,
         callbackUrl
       });
@@ -432,7 +435,8 @@ export default function LoginModal({ isOpen, onClose }) {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          isResend: true
+          isResend: true,
+          isSignup: !isLogin
         }),
       });
 
@@ -935,7 +939,9 @@ export default function LoginModal({ isOpen, onClose }) {
         <button
           onClick={handleVerifyOtp}
           disabled={loading || otpDigits.some(digit => !digit)}
-          className={`w-full px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-sm cursor-pointer`}
+          className={`w-full px-3 py-2.5 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
+            ${error ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'} 
+            ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
         >
           {loading ? (
             <div className="flex items-center justify-center gap-2">
@@ -993,7 +999,7 @@ export default function LoginModal({ isOpen, onClose }) {
             <div className="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-md">
               {isResetPassword ? (
                 renderResetPassword()
-              ) : showOtpInput ? (
+              ) : showOtpScreen ? (
                 renderOtpScreen()
               ) : (
                 <div className="p-6">
