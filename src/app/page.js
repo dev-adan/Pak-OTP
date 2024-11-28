@@ -72,7 +72,7 @@ export default function Home() {
         </section>
 
         {/* Contact Section */}
-        <div className="-mt-24 relative z-10">
+        <div className="-mt-24 relative z-11">
           <ContactUs />
         </div>
 
