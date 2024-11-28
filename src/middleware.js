@@ -13,23 +13,21 @@ export default withAuth(
     const isAuth = !!token;
     const pathname = req.nextUrl.pathname;
 
-    // Only apply auth logic to protected routes
-    if (isProtectedRoute(pathname)) {
-      if (!isAuth) {
-        // Redirect to home page with login modal
-        const url = new URL('/', req.url);
-        url.searchParams.set('showLogin', 'true');
-        return NextResponse.redirect(url);
-      }
-
-      // Handle admin routes
-      if (pathname.startsWith('/admin') && token.role !== 'admin') {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-      }
+    // If accessing dashboard without auth, redirect to home with login modal
+    if (isProtectedRoute(pathname) && !isAuth) {
+      const redirectUrl = new URL('/', req.url);
+      redirectUrl.searchParams.set('showLogin', 'true');
+      redirectUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(redirectUrl);
     }
 
-    // For auth pages (login/register), redirect to dashboard if already logged in
-    if (pathname.startsWith('/auth') && isAuth) {
+    // If accessing auth pages while logged in, redirect to dashboard
+    if (pathname === '/' && isAuth) {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
+    // Handle admin routes
+    if (pathname.startsWith('/admin') && token?.role !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
@@ -37,12 +35,13 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ req, token }) => {
-        if (isProtectedRoute(req.nextUrl.pathname)) {
-          return !!token;
-        }
-        return true;
+      authorized: ({ token }) => {
+        return true; // Let the middleware function handle the auth logic
       },
+    },
+    pages: {
+      signIn: '/',
+      error: '/',
     },
   }
 );
@@ -51,7 +50,6 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/admin/:path*',
-    '/auth/:path*',
-    '/api/auth/:path*'
+    '/'
   ]
 };

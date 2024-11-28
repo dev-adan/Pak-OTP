@@ -139,11 +139,16 @@ export default function LoginModal({ isOpen, onClose }) {
 
       if (isLogin) {
         setLoading(true);
+        
+        // Get the callback URL from URL params or use default
+        const params = new URLSearchParams(window.location.search);
+        const callbackUrl = params.get('callbackUrl') || '/dashboard';
+        
         const result = await signIn('credentials', {
           email: formData.email,
           password: formData.password,
           redirect: false,
-          callbackUrl: `${window.location.origin}/dashboard`
+          callbackUrl: callbackUrl
         });
 
         if (result?.error) {
@@ -165,12 +170,19 @@ export default function LoginModal({ isOpen, onClose }) {
           return;
         }
 
-        // Success - handle redirection
+        // Success
         toast.success('Login successful!');
         onClose(); // Close modal first
         
-        // Use window.location for a hard redirect
-        window.location.href = `${window.location.origin}/dashboard`;
+        // Small delay to ensure modal is closed
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Use router.push for client-side navigation
+        if (result.url) {
+          window.location.href = result.url;
+        } else {
+          window.location.href = callbackUrl;
+        }
       } else {
         // Handle Sign Up
         const res = await fetch('/api/auth/send-otp', {
