@@ -112,28 +112,18 @@ export const authOptions = {
   },
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: 'none',
-        path: '/',
-        secure: true,
-        domain: '.vercel.app'
-      }
-    },
-    callbackUrl: {
-      name: `__Secure-next-auth.callback-url`,
-      options: {
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/',
         secure: true
       }
     },
-    csrfToken: {
-      name: `__Host-next-auth.csrf-token`,
+    callbackUrl: {
+      name: `next-auth.callback-url`,
       options: {
-        httpOnly: true,
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/',
         secure: true
       }

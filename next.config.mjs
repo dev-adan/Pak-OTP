@@ -30,8 +30,12 @@ const nextConfig = {
             value: 'strict-origin-when-cross-origin'
           },
           {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true'
+          },
+          {
             key: 'Access-Control-Allow-Origin',
-            value: '*'
+            value: 'https://pak-otp.vercel.app'
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -40,6 +44,10 @@ const nextConfig = {
           {
             key: 'Access-Control-Allow-Headers',
             value: 'Content-Type, Authorization'
+          },
+          {
+            key: 'Access-Control-Expose-Headers',
+            value: 'Set-Cookie'
           }
         ]
       }

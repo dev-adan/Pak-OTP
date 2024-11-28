@@ -139,7 +139,7 @@ export default function DashboardLayout({ children }) {
                     className={`w-6 h-6 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`} 
                   />
                   {(isSidebarOpen || isMobileView) && (
-                    <span className={`ml-3 font-medium`}>
+                    <span className="ml-3 font-medium">
                       {item.name}
                     </span>
                   )}
