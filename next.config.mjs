@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
-    return [
+    const headers = [
       {
         source: '/:path*',
         headers: [
@@ -28,7 +28,16 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin'
-          },
+          }
+        ]
+      }
+    ];
+
+    // Add CORS headers only in production
+    if (process.env.NODE_ENV === 'production') {
+      headers.push({
+        source: '/api/:path*',
+        headers: [
           {
             key: 'Access-Control-Allow-Credentials',
             value: 'true'
@@ -43,24 +52,18 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization'
-          },
-          {
-            key: 'Access-Control-Expose-Headers',
-            value: 'Set-Cookie'
+            value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
           }
         ]
-      }
-    ];
-  },
-  webpack(config, { dev }) {
-    if (dev) {
-      config.devtool = 'source-map';
-    } else {
-      config.devtool = 'hidden-source-map';
+      });
     }
-    return config;
+
+    return headers;
   },
+  webpack(config) {
+    config.devtool = 'source-map';
+    return config;
+  }
 };
 
 export default nextConfig;
