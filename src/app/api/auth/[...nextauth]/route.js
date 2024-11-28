@@ -118,7 +118,7 @@ export const authOptions = {
         sameSite: 'none',
         path: '/',
         secure: true,
-        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : 'localhost'
+        domain: '.vercel.app'
       }
     },
     callbackUrl: {

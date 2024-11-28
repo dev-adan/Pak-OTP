@@ -30,12 +30,16 @@ const nextConfig = {
             value: 'strict-origin-when-cross-origin'
           },
           {
-            key: 'Access-Control-Allow-Credentials',
-            value: 'true'
+            key: 'Access-Control-Allow-Origin',
+            value: '*'
           },
           {
-            key: 'Access-Control-Allow-Origin',
-            value: process.env.NODE_ENV === 'production' ? 'https://pak-otp.vercel.app' : 'http://localhost:3000'
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET,POST,OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization'
           }
         ]
       }
