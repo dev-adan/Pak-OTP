@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifyOTP } from '@/lib/otpUtils';
 import { logger } from '@/lib/logger';
-import connectDB from '@/lib/mongodb';
+import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
-import bcrypt from 'bcryptjs';
 
 export async function POST(req) {
   try {
@@ -23,7 +22,11 @@ export async function POST(req) {
     
     logger.info(`Verifying OTP: ${otpString} for email: ${email}`);
 
-    const result = await verifyOTP(email, otpString);
+    // Ensure MongoDB connection
+    await connectDB();
+
+    // Verify OTP first
+    const result = await verifyOTP(email.toLowerCase(), otpString);
 
     if (!result.valid) {
       logger.warn(`OTP verification failed: ${result.message}`);
@@ -33,42 +36,40 @@ export async function POST(req) {
       );
     }
 
-    await connectDB();
-
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      logger.warn(`User already exists with email: ${email}`);
       return NextResponse.json(
         { error: 'User already exists' },
         { status: 400 }
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user
+    // Create new user - password will be hashed by the pre-save middleware
     const newUser = await User.create({
       name,
-      email,
-      password: hashedPassword,
+      email: email.toLowerCase(),
+      password, // Raw password - will be hashed by pre-save middleware
+      role: 'user'
     });
 
     logger.info(`User created successfully: ${email}`);
-
-    return NextResponse.json({
-      message: 'Registration successful',
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-      },
-    });
-  } catch (error) {
-    logger.error(`Error in OTP verification: ${error.message}`);
     return NextResponse.json(
-      { error: 'Error verifying OTP' },
+      { 
+        message: 'User registered successfully',
+        user: {
+          id: newUser._id,
+          email: newUser.email,
+          name: newUser.name
+        }
+      },
+      { status: 201 }
+    );
+
+  } catch (error) {
+    logger.error(`Error in verify-otp: ${error.message}`);
+    return NextResponse.json(
+      { error: 'An error occurred during registration' },
       { status: 500 }
     );
   }

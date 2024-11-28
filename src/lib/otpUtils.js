@@ -1,14 +1,20 @@
 import nodemailer from 'nodemailer';
 import { logger } from './logger';
-import connectDB from '@/lib/mongodb';
+import { connectDB } from '@/lib/mongodb';
 import OTP from '@/models/OTP';
 
-// Create a transporter using environment variables
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // Use Gmail service instead of custom host
+// Create reusable transporter object using GMAIL
+let transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
+  },
+  tls: {
+    // do not fail on invalid certs
+    rejectUnauthorized: false
   }
 });
 
@@ -86,10 +92,14 @@ export async function verifyOTP(email, userOTP) {
   }
 }
 
+// Send OTP via email
 export async function sendOTPEmail(email, otp) {
   try {
+    // Verify connection configuration
+    await transporter.verify();
+    
     const info = await transporter.sendMail({
-      from: process.env.GMAIL_USER,
+      from: `"Pak OTP" <${process.env.GMAIL_USER}>`,
       to: email,
       subject: 'Your OTP for Registration',
       html: `
@@ -109,10 +119,11 @@ export async function sendOTPEmail(email, otp) {
       `
     });
 
-    logger.info(`OTP email sent successfully to ${email}`);
+    logger.info(`Email sent successfully to ${email}`);
+    logger.info(`Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
-    logger.error(`Error sending OTP email: ${error.message}`);
+    logger.error(`Error sending email: ${error.message}`);
     return false;
   }
 }

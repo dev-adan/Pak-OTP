@@ -128,6 +128,8 @@ export default function LoginModal({ isOpen, onClose }) {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
 
     try {
       // Reset errors
@@ -287,11 +289,12 @@ export default function LoginModal({ isOpen, onClose }) {
       setLoading(true);
       setError(''); // Clear previous errors
 
+      // First verify OTP and create account
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: formData.email,
+          email: formData.email.toLowerCase(), // Ensure email is lowercase
           name: formData.name,
           password: formData.password,
           otp: otp
@@ -307,22 +310,31 @@ export default function LoginModal({ isOpen, onClose }) {
 
       toast.success('Account created successfully!');
       
+      // Get the callback URL from URL params or use default
+      const params = new URLSearchParams(window.location.search);
+      const callbackUrl = params.get('callbackUrl') || '/dashboard';
+
       // Log in the user after successful verification
       const result = await signIn('credentials', {
-        email: formData.email,
+        email: formData.email.toLowerCase(), // Ensure email is lowercase
         password: formData.password,
         redirect: false,
+        callbackUrl
       });
 
       if (result?.error) {
-        setError(result.error);
-        toast.error(result.error);
+        setError('Failed to log in after registration. Please try logging in manually.');
+        toast.error('Failed to log in after registration. Please try logging in manually.');
         return;
       }
 
-      router.push('/dashboard');
-      router.refresh();
+      // Success - close modal and redirect
       onClose();
+      if (result.url) {
+        window.location.href = result.url;
+      } else {
+        window.location.href = callbackUrl;
+      }
     } catch (error) {
       setError(error.message);
       toast.error(error.message);
@@ -537,33 +549,33 @@ export default function LoginModal({ isOpen, onClose }) {
       initial="enter"
       animate="center"
       exit="exit"
-      className="absolute inset-0 z-50 bg-white p-6 rounded-2xl"
+      className="absolute inset-0 z-50 bg-white p-4 sm:p-6 rounded-2xl"
       style={{ position: 'relative', minHeight: '100%' }}
     >
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
         <button
           onClick={() => {
             setSlideDirection(-1);
             setShowOtpScreen(false);
           }}
-          className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-all duration-200"
+          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-all duration-200 text-sm sm:text-base"
         >
-          <Icon icon="heroicons:arrow-left-20-solid" className="w-5 h-5" />
-          <span>Back to signup</span>
+          <Icon icon="heroicons:arrow-left-20-solid" className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span>Back</span>
         </button>
         <button
           onClick={onClose}
-          className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
         >
-          <Icon icon="heroicons:x-mark-20-solid" className="w-5 h-5" />
+          <Icon icon="heroicons:x-mark-20-solid" className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
 
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="text-center mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
           Verify your email
         </h2>
-        <p className="text-gray-600">
+        <p className="text-sm sm:text-base text-gray-600">
           We've sent a verification code to<br />
           <span className="font-medium text-gray-900">{formData.email}</span>
         </p>
@@ -572,19 +584,21 @@ export default function LoginModal({ isOpen, onClose }) {
             setSlideDirection(-1);
             setShowOtpScreen(false);
           }}
-          className="mt-2 text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
+          className="mt-2 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
         >
           Change email address?
         </button>
       </div>
 
-      <div className="space-y-6">
-        <div className="flex justify-center space-x-3">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex justify-center gap-2 sm:gap-3">
           {otpDigits.map((digit, index) => (
             <input
               key={index}
               id={`otp-${index}`}
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               maxLength="1"
               value={digit}
               onChange={(e) => handleOtpChange(index, e.target.value)}
@@ -592,7 +606,8 @@ export default function LoginModal({ isOpen, onClose }) {
               onPaste={handlePaste}
               data-index={index}
               onFocus={preventScrollBehavior}
-              className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500`}
+              className={`w-9 h-10 sm:w-12 sm:h-12 text-center text-lg sm:text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-2 focus:ring-offset-0`}
+              ref={otpInputRefs[index]}
             />
           ))}
         </div>
@@ -603,15 +618,15 @@ export default function LoginModal({ isOpen, onClose }) {
           transition={{ delay: 0.6 }}
           onClick={handleVerifyOtp}
           disabled={loading || otpDigits.some(digit => !digit)}
-          className={`w-full px-4 py-3 sm:py-2.5 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
+          className={`w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
         >
           {loading ? (
             <div className="flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Verifying...
+              <span className="text-sm sm:text-base">Verifying...</span>
             </div>
           ) : (
             'Verify Email'
@@ -627,7 +642,7 @@ export default function LoginModal({ isOpen, onClose }) {
           <button
             onClick={handleFormSubmit}
             disabled={loading}
-            className="text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75"
+            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75"
           >
             Didn't receive the code? Resend
           </button>
@@ -945,7 +960,7 @@ export default function LoginModal({ isOpen, onClose }) {
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Processing...
+                            {isLogin ? 'Signing In...' : 'Sending OTP...'}
                           </div>
                         ) : isLogin ? (
                           'Sign In'

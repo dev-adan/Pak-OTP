@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateOTP, storeOTP, sendOTPEmail } from '@/lib/otpUtils';
 import { logger } from '@/lib/logger';
-import connectDB from '@/lib/mongodb';
+import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 
 export async function POST(req) {
@@ -37,7 +37,7 @@ export async function POST(req) {
     await connectDB();
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return NextResponse.json(
         { error: 'User already exists' },
@@ -47,10 +47,16 @@ export async function POST(req) {
 
     // Generate and store OTP
     const otp = generateOTP();
-    storeOTP(email, otp);
+    const stored = await storeOTP(email.toLowerCase(), otp);
+    if (!stored) {
+      return NextResponse.json(
+        { error: 'Failed to store OTP' },
+        { status: 500 }
+      );
+    }
 
     // Send OTP via email
-    const emailSent = await sendOTPEmail(email, otp);
+    const emailSent = await sendOTPEmail(email.toLowerCase(), otp);
     if (!emailSent) {
       return NextResponse.json(
         { error: 'Failed to send OTP email' },
