@@ -7,21 +7,42 @@ export default function ContactUs() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    subject: '',
+    phone: '',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    setError('');
+    
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Failed to send message');
+      }
+
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+      setFormData({ name: '', email: '', phone: '', message: '' });
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -126,11 +147,19 @@ export default function ContactUs() {
             <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100 relative overflow-hidden">
               {/* Success Message */}
               <div
-                className={`absolute top-4 left-4 right-4 bg-green-50 text-green-600 px-4 py-2 rounded-lg ${showSuccess ? 'block' : 'hidden'}`}
+                className={`absolute top-4 left-4 right-4 bg-green-50 text-green-600 px-4 py-2 rounded-lg transition-opacity duration-200 ${
+                  showSuccess ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
               >
                 Message sent successfully!
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <div className="absolute top-4 left-4 right-4 bg-red-50 text-red-600 px-4 py-2 rounded-lg">
+                  {error}
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
@@ -144,8 +173,8 @@ export default function ContactUs() {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="John Doe"
+                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
+                      placeholder="Muhammad Ali"
                     />
                   </div>
                   <div>
@@ -159,24 +188,29 @@ export default function ContactUs() {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="john@example.com"
+                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
+                      placeholder="ali@example.com"
                     />
                   </div>
                   <div>
-                    <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
-                      Subject
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number <span className="text-gray-400 text-xs">(Optional)</span>
                     </label>
-                    <input
-                      type="text"
-                      name="subject"
-                      id="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                      placeholder="How can we help?"
-                    />
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Icon icon="material-symbols:phone" className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="tel"
+                        name="phone"
+                        id="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        pattern="[0-9+\-\s]*"
+                        className="block w-full pl-12 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
+                        placeholder="0336-5555000"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
@@ -189,7 +223,7 @@ export default function ContactUs() {
                       value={formData.message}
                       onChange={handleChange}
                       required
-                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white resize-none"
+                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500 resize-none"
                       placeholder="Your message..."
                     />
                   </div>

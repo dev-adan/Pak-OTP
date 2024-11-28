@@ -159,9 +159,11 @@ export default function DashboardLayout({ children }) {
                   {session?.user?.name?.[0]?.toUpperCase() || 'U'}
                 </div>
                 {(isSidebarOpen || isMobileView) && (
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{session?.user?.name || 'User'}</h3>
-                    <p className="text-sm text-gray-500">{session?.user?.email}</p>
+                  <div className="flex-1 min-w-0 max-w-[160px]">
+                    <h3 className="font-medium text-gray-900 truncate text-sm">{session?.user?.name || 'User'}</h3>
+                    <p className="text-xs text-gray-500 truncate w-full">
+                      {session?.user?.email}
+                    </p>
                   </div>
                 )}
               </div>
