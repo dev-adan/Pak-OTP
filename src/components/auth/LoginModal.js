@@ -20,6 +20,11 @@ export default function LoginModal({ isOpen, onClose }) {
   const [showNewPasswordFields, setShowNewPasswordFields] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({
+    email: false,
+    password: false,
+    name: false
+  });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -86,6 +91,14 @@ export default function LoginModal({ isOpen, onClose }) {
     return re.test(email);
   };
 
+  const validatePassword = (password) => {
+    if (!password || password.length < 6) {
+      return 'Password must be at least 6 characters long';
+    }
+    // Add more password requirements if needed
+    return null;
+  };
+
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
@@ -105,7 +118,84 @@ export default function LoginModal({ isOpen, onClose }) {
       ...prev,
       [name]: value
     }));
+    // Clear error for this field
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: false
+    }));
     setError('');
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      // Reset errors
+      setFieldErrors({
+        email: false,
+        password: false,
+        name: false
+      });
+
+      if (isLogin) {
+        setLoading(true);
+        const result = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          if (result.error.includes('No user found')) {
+            setFieldErrors(prev => ({ ...prev, email: true }));
+            const errorMsg = 'No account found with this email. Would you like to sign up instead?';
+            setError(errorMsg);
+            toast.error(errorMsg);
+          } else if (result.error.includes('Invalid password')) {
+            setFieldErrors(prev => ({ ...prev, password: true }));
+            const errorMsg = 'Incorrect password. Please try again.';
+            setError(errorMsg);
+            toast.error(errorMsg);
+          } else {
+            setError(result.error || 'Login failed. Please try again.');
+            toast.error(result.error || 'Login failed. Please try again.');
+          }
+          return;
+        }
+
+        toast.success('Login successful!');
+        router.push('/dashboard');
+        router.refresh();
+        onClose();
+      } else {
+        // Handle Sign Up
+        const res = await fetch('/api/auth/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || 'Registration failed');
+          toast.error(data.error || 'Registration failed');
+          return;
+        }
+
+        toast.success('OTP sent to your email!');
+        setSlideDirection(1);
+        setShowOtpScreen(true);
+      }
+    } catch (error) {
+      setError(error.message);
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOtpChange = (index, value) => {
@@ -155,94 +245,6 @@ export default function LoginModal({ isOpen, onClose }) {
     }
   };
 
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      setError('');
-
-      if (!isLogin) {
-        // Handle Sign Up
-        const res = await fetch('/api/auth/send-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error);
-        }
-
-        toast.success('OTP sent to your email!');
-        setSlideDirection(1);
-        setShowOtpScreen(true);
-      } else {
-        // Handle Sign In
-        const result = await signIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false,
-        });
-
-        if (result?.error) {
-          throw new Error(result.error);
-        }
-
-        router.push('/dashboard');
-        router.refresh();
-        onClose();
-      }
-    } catch (error) {
-      setError(error.message);
-      toast.error(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      const otp = otpDigits.join('');
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          otp: otp,
-          password: formData.password,
-          name: formData.name
-        }),
-      });
-
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Invalid OTP code. Please try again.');
-      }
-
-      toast.success('Account created successfully!');
-      setShowOtpScreen(false);
-      setIsLogin(true);
-      setFormData({});
-      setOtpDigits(['', '', '', '', '', '']);
-      onClose();
-
-    } catch (error) {
-      setError(error.message);
-      toast.error(error.message);
-      // Clear OTP fields on error
-      setOtpDigits(['', '', '', '', '', '']);
-      // Focus first input
-      otpInputRefs[0].current?.focus();
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleResetEmailChange = (e) => {
     const email = e.target.value;
     setResetEmail(email);
@@ -257,11 +259,59 @@ export default function LoginModal({ isOpen, onClose }) {
     }
   };
 
-  const handleVerifyOtp = () => {
-    // TODO: Implement actual OTP verification logic here
-    if (otpDigits.join('').length === 4) {
-      setShowNewPasswordFields(true);
-      setPasswordError('');
+  const handleVerifyOtp = async () => {
+    try {
+      const otp = otpDigits.join('');
+      if (!otp || otp.length !== 6) {
+        setError('Please enter a valid 6-digit OTP');
+        toast.error('Please enter a valid 6-digit OTP');
+        return;
+      }
+
+      setLoading(true);
+      setError(''); // Clear previous errors
+
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          password: formData.password,
+          otp: otp
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'OTP verification failed');
+        toast.error(data.error || 'OTP verification failed');
+        return;
+      }
+
+      toast.success('Account created successfully!');
+      
+      // Log in the user after successful verification
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError(result.error);
+        toast.error(result.error);
+        return;
+      }
+
+      router.push('/dashboard');
+      router.refresh();
+      onClose();
+    } catch (error) {
+      setError(error.message);
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -290,19 +340,15 @@ export default function LoginModal({ isOpen, onClose }) {
     setOtpDigits(['', '', '', '', '', '']);
     setNewPassword('');
     setConfirmPassword('');
+    setPasswordError('');
     onClose();
   };
 
-  const preventScroll = (e) => {
-    e.stopPropagation();
-  };
-
-  const preventModalClose = (e) => {
-    e.stopPropagation();
-  };
-
-  const preventScrollOnFocus = (e) => {
-    e.target.scrollIntoView = () => {};
+  const preventScrollBehavior = (e) => {
+    // Only prevent scrolling, don't prevent default behavior
+    if (e.target) {
+      e.target.scrollIntoView = () => {};
+    }
   };
 
   const renderResetPassword = () => (
@@ -318,9 +364,9 @@ export default function LoginModal({ isOpen, onClose }) {
             id="reset-email"
             value={resetEmail}
             onChange={handleResetEmailChange}
-            className={`w-full px-4 py-2 border ${
-              isEmailValid ? 'border-gray-300' : 'border-red-500'
-            } rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all text-gray-900 placeholder-gray-500`}
+            className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+              ${isEmailValid ? 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white' : 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500'}
+              outline-none shadow-sm text-gray-900 placeholder-gray-400`}
             placeholder="Enter your email"
           />
           {!isEmailValid && (
@@ -331,14 +377,21 @@ export default function LoginModal({ isOpen, onClose }) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleSendCode}
-            disabled={!isEmailValid || !resetEmail}
-            className={`w-full py-3 px-4 mt-4 ${
-              isEmailValid && resetEmail
-                ? 'bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600'
-                : 'bg-gray-300'
-            } text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all`}
+            disabled={!isEmailValid || !resetEmail || loading}
+            className={`w-full py-3 px-4 mt-4 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-700 hover:to-blue-600 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all
+              ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
-            Send Code
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Sending...
+              </div>
+            ) : (
+              'Send Code'
+            )}
           </motion.button>
         </div>
       ) : showNewPasswordFields ? (
@@ -353,7 +406,9 @@ export default function LoginModal({ isOpen, onClose }) {
               id="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400 placeholder:opacity-60"
+              className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+                ${passwordError ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                outline-none shadow-sm text-gray-900 placeholder-gray-400`}
               placeholder="Enter new password"
               minLength={8}
             />
@@ -368,23 +423,33 @@ export default function LoginModal({ isOpen, onClose }) {
               id="confirm-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400 placeholder:opacity-60"
+              className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+                ${passwordError ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200 focus:border-red-500' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                outline-none shadow-sm text-gray-900 placeholder-gray-400`}
               placeholder="Confirm new password"
               minLength={8}
             />
           </div>
 
-          {passwordError && (
-            <p className="text-sm text-red-500">{passwordError}</p>
-          )}
-
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
+            disabled={loading}
+            className={`w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all
+              ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
-            Update Password
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Updating...
+              </div>
+            ) : (
+              'Update Password'
+            )}
           </motion.button>
         </form>
       ) : (
@@ -402,17 +467,8 @@ export default function LoginModal({ isOpen, onClose }) {
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
                 data-index={index}
-                onFocus={(e) => {
-                  e.preventDefault();
-                  e.target.scrollIntoView = () => {};
-                }}
-                onMouseDown={preventScroll}
-                onFocus={preventScrollOnFocus}
-                className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all
-                  ${error 
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                  }`}
+                onFocus={preventScrollBehavior}
+                className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500`}
               />
             ))}
           </div>
@@ -420,13 +476,21 @@ export default function LoginModal({ isOpen, onClose }) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleVerifyOtp}
-            className={`w-full py-3 px-4 mt-4 ${
-              error 
-                ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
-                : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-            } text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all`}
+            disabled={loading || otpDigits.some(digit => !digit)}
+            className={`w-full py-3 px-4 mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
+              ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
-            Verify Code
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Verifying...
+              </div>
+            ) : (
+              'Verify Code'
+            )}
           </motion.button>
         </div>
       )}
@@ -507,52 +571,32 @@ export default function LoginModal({ isOpen, onClose }) {
               type="text"
               maxLength="1"
               value={digit}
-              data-index={index}
               onChange={(e) => handleOtpChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              onFocus={(e) => {
-                e.preventDefault();
-                e.target.scrollIntoView = () => {};
-              }}
-              onMouseDown={preventScroll}
-              onFocus={preventScrollOnFocus}
-              className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all
-                ${error 
-                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                }`}
+              data-index={index}
+              onFocus={preventScrollBehavior}
+              className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500`}
             />
           ))}
         </div>
-
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center text-red-500 text-sm"
-          >
-            {error}
-          </motion.div>
-        )}
 
         <motion.button
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6 }}
-          onClick={handleSubmit}
+          onClick={handleVerifyOtp}
           disabled={loading || otpDigits.some(digit => !digit)}
-          className={`w-full px-4 py-3 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100
-            ${error 
-              ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
-              : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-            }`}
+          className={`w-full px-4 py-3 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
         >
           {loading ? (
-            <span className="flex items-center justify-center">
-              <Icon icon="eos-icons:loading" className="w-5 h-5 mr-2 animate-spin" />
+            <div className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
               Verifying...
-            </span>
+            </div>
           ) : (
             'Verify Email'
           )}
@@ -567,7 +611,7 @@ export default function LoginModal({ isOpen, onClose }) {
           <button
             onClick={handleFormSubmit}
             disabled={loading}
-            className="text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-50"
+            className="text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75"
           >
             Didn't receive the code? Resend
           </button>
@@ -595,8 +639,8 @@ export default function LoginModal({ isOpen, onClose }) {
               e.preventDefault();
               e.stopPropagation();
             }}
-            onMouseDown={preventScroll}
-            onFocus={preventScrollOnFocus}
+            onMouseDown={preventScrollBehavior}
+            onFocus={preventScrollBehavior}
           >
             <AnimatePresence mode="wait" custom={slideDirection}>
               {showOtpScreen ? (
@@ -657,52 +701,32 @@ export default function LoginModal({ isOpen, onClose }) {
                           type="text"
                           maxLength="1"
                           value={digit}
-                          data-index={index}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(index, e)}
                           onPaste={handlePaste}
-                          onFocus={(e) => {
-                            e.preventDefault();
-                            e.target.scrollIntoView = () => {};
-                          }}
-                          onMouseDown={preventScroll}
-                          onFocus={preventScrollOnFocus}
-                          className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all
-                            ${error 
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                              : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                            }`}
+                          data-index={index}
+                          onFocus={preventScrollBehavior}
+                          className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500`}
                         />
                       ))}
                     </div>
-
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center text-red-500 text-sm"
-                      >
-                        {error}
-                      </motion.div>
-                    )}
 
                     <motion.button
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.6 }}
-                      onClick={handleSubmit}
+                      onClick={handleVerifyOtp}
                       disabled={loading || otpDigits.some(digit => !digit)}
-                      className={`w-full px-4 py-3 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100
-                        ${error 
-                          ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
-                          : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-                        }`}
+                      className={`w-full px-4 py-3 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
                     >
                       {loading ? (
-                        <span className="flex items-center justify-center">
-                          <Icon icon="eos-icons:loading" className="w-5 h-5 mr-2 animate-spin" />
+                        <div className="flex items-center justify-center">
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
                           Verifying...
-                        </span>
+                        </div>
                       ) : (
                         'Verify Email'
                       )}
@@ -717,7 +741,7 @@ export default function LoginModal({ isOpen, onClose }) {
                       <button
                         onClick={handleFormSubmit}
                         disabled={loading}
-                        className="text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-50"
+                        className="text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75"
                       >
                         Didn't receive the code? Resend
                       </button>
@@ -756,11 +780,42 @@ export default function LoginModal({ isOpen, onClose }) {
                   </div>
 
                   {error && (
-                    <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-500 text-sm">
-                      {error}
-                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mb-4 backdrop-blur-md bg-red-50/30 border border-red-100 rounded-xl overflow-hidden"
+                    >
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          <svg 
+                            className="h-5 w-5 text-red-400" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor"
+                          >
+                            <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                            <path d="M12 8v4m0 4h.01" strokeWidth="2" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                        <div className="flex-1 text-sm text-red-600">
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.1 }}
+                          >
+                            {error}
+                          </motion.p>
+                        </div>
+                      </div>
+                      <div 
+                        className="h-1 bg-gradient-to-r from-red-300/50 to-red-400/50"
+                        style={{
+                          clipPath: 'polygon(0 0, 100% 0, 98% 100%, 2% 100%)'
+                        }}
+                      />
+                    </motion.div>
                   )}
-
                   {!isResetPassword && (
                     <div className="mb-6">
                       <motion.button
@@ -768,7 +823,7 @@ export default function LoginModal({ isOpen, onClose }) {
                         whileTap={{ scale: 0.98 }}
                         onClick={handleGoogleSignIn}
                         disabled={loading}
-                        className="w-full flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed"
                       >
                         <Icon icon="flat-color-icons:google" className="w-5 h-5 mr-2" />
                         Continue with Google
@@ -791,7 +846,7 @@ export default function LoginModal({ isOpen, onClose }) {
                     <form onSubmit={handleFormSubmit} className="space-y-4">
                       {!isLogin && (
                         <div>
-                          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                             Name
                           </label>
                           <input
@@ -800,13 +855,11 @@ export default function LoginModal({ isOpen, onClose }) {
                             name="name"
                             value={formData.name || ''}
                             onChange={handleInputChange}
-                            onFocus={(e) => {
-                              e.preventDefault();
-                              e.target.scrollIntoView = () => {};
-                            }}
-                            onMouseDown={preventScroll}
-                            onFocus={preventScrollOnFocus}
-                            className="w-full px-3 py-2 mt-1 border rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 placeholder:opacity-60"
+                            className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+                              ${fieldErrors.name 
+                                ? 'border-2 border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500' 
+                                : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                              outline-none shadow-sm text-gray-900 placeholder-gray-400`}
                             required
                             placeholder="Enter your full name"
                           />
@@ -814,78 +867,82 @@ export default function LoginModal({ isOpen, onClose }) {
                       )}
 
                       <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                           Email
                         </label>
                         <input
                           type="email"
                           id="email"
                           name="email"
-                          value={formData.email || ''}
+                          value={formData.email}
                           onChange={handleInputChange}
-                          onFocus={(e) => {
-                            e.preventDefault();
-                            e.target.scrollIntoView = () => {};
-                          }}
-                          onMouseDown={preventScroll}
-                          onFocus={preventScrollOnFocus}
-                          className="w-full px-3 py-2 mt-1 border rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 placeholder:opacity-60"
+                          className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+                            ${fieldErrors.email 
+                              ? 'border-2 border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500' 
+                              : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                            outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                          placeholder="Enter your email"
                           required
-                          placeholder={isLogin ? "Enter your email address" : "Enter your email address for OTP"}
                         />
                       </div>
 
                       <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                           Password
                         </label>
                         <input
                           type="password"
                           id="password"
                           name="password"
-                          value={formData.password || ''}
+                          value={formData.password}
                           onChange={handleInputChange}
-                          onFocus={(e) => {
-                            e.preventDefault();
-                            e.target.scrollIntoView = () => {};
-                          }}
-                          onMouseDown={preventScroll}
-                          onFocus={preventScrollOnFocus}
-                          className="w-full px-3 py-2 mt-1 border rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 placeholder:opacity-60"
-                          required
+                          className={`w-full px-4 py-2.5 rounded-lg text-sm transition-all duration-200
+                            ${fieldErrors.password 
+                              ? 'border-2 border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500' 
+                              : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                            outline-none shadow-sm text-gray-900 placeholder-gray-400`}
                           placeholder={isLogin ? "Enter your password" : "Create a strong password"}
+                          required
                         />
                       </div>
 
                       {isLogin && (
-                        <div className="flex items-center justify-end">
+                        <div className="text-sm">
                           <button
                             type="button"
-                            onClick={() => {
-                              setIsResetPassword(true);
-                              setError('');
-                            }}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                            onClick={() => setIsResetPassword(true)}
+                            className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition-colors duration-200"
                           >
-                            Forgot password?
+                            Forgot your password?
                           </button>
                         </div>
                       )}
 
-                      {error && <p className="text-sm text-red-600">{error}</p>}
-
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleFormSubmit(e);
+                        }}
+                        className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-all duration-200
+                          ${error 
+                            ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
+                            : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'} 
+                          ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                       >
                         {loading ? (
-                          <span className="flex items-center justify-center">
-                            <Icon icon="eos-icons:loading" className="w-5 h-5 mr-2 animate-spin" />
-                            {isLogin ? 'Logging in...' : 'Sending OTP...'}
-                          </span>
+                          <div className="flex items-center justify-center">
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Processing...
+                          </div>
+                        ) : isLogin ? (
+                          'Sign In'
                         ) : (
-                          isLogin ? 'Login' : 'Send OTP'
+                          'Sign Up'
                         )}
                       </button>
                     </form>
@@ -897,7 +954,16 @@ export default function LoginModal({ isOpen, onClose }) {
                       onClick={() => {
                         setIsLogin(!isLogin);
                         setError('');
-                        setFormData({});
+                        setFieldErrors({
+                          email: false,
+                          password: false,
+                          name: false
+                        });
+                        setFormData({
+                          name: '',
+                          email: '',
+                          password: ''
+                        });
                         setShowOtpScreen(false);
                         setOtpDigits(['', '', '', '', '', '']);
                       }}
