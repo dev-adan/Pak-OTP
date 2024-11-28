@@ -118,7 +118,7 @@ export const authOptions = {
         sameSite: 'lax',
         path: '/',
         secure: true,
-        domain: process.env.VERCEL_URL ? '.vercel.app' : undefined
+        domain: 'pak-otp.vercel.app'
       }
     },
     callbackUrl: {
