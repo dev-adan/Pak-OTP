@@ -77,8 +77,8 @@ export const authOptions = {
     },
     async jwt({ token, user, account }) {
       if (user) {
-        token.role = user.role;
         token.id = user.id;
+        token.role = user.role;
       }
       // If it's a Google login, fetch user from DB to get role
       if (account?.provider === 'google') {
@@ -92,8 +92,8 @@ export const authOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user.role = token.role;
         session.user.id = token.id;
+        session.user.role = token.role;
       }
       return session;
     }
