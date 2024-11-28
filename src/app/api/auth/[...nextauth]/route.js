@@ -63,6 +63,35 @@ const handler = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true,
+        domain: process.env.VERCEL_URL ? '.vercel.app' : undefined
+      }
+    },
+    callbackUrl: {
+      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
+      options: {
+        sameSite: 'none',
+        path: '/',
+        secure: true
+      }
+    },
+    csrfToken: {
+      name: `${process.env.NODE_ENV === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true
+      }
+    }
+  },
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === 'google') {
@@ -105,33 +134,15 @@ const handler = NextAuth({
       return session;
     }
   },
-  cookies: {
-    sessionToken: {
-      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'none',
-        path: '/',
-        secure: true,
-        domain: process.env.NODE_ENV === 'production' ? 'pak-otp.vercel.app' : undefined
-      }
+  events: {
+    async signIn({ user, account, profile }) {
+      logger.info(`User signed in: ${user.email}`);
     },
-    callbackUrl: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Secure-' : ''}next-auth.callback-url`,
-      options: {
-        sameSite: 'none',
-        path: '/',
-        secure: true
-      }
+    async signOut({ session, token }) {
+      logger.info(`User signed out: ${session?.user?.email}`);
     },
-    csrfToken: {
-      name: `${process.env.NODE_ENV === 'production' ? '__Host-' : ''}next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'none',
-        path: '/',
-        secure: true
-      }
+    async error(error) {
+      logger.error(`Authentication error: ${error.message}`);
     }
   },
   secret: process.env.NEXTAUTH_SECRET,

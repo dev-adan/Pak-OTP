@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
-    const headers = [
+    return [
       {
         source: '/:path*',
         headers: [
@@ -28,19 +28,10 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin'
-          }
-        ]
-      },
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Access-Control-Allow-Credentials',
-            value: 'true'
           },
           {
             key: 'Access-Control-Allow-Origin',
-            value: 'https://pak-otp.vercel.app'
+            value: '*'
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -48,13 +39,18 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+            value: '*'
           }
         ]
       }
     ];
-
-    return headers;
+  },
+  experimental: {
+    serverActions: true
+  },
+  reactStrictMode: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production'
   }
 };
 
