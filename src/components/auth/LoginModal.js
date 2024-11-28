@@ -224,16 +224,9 @@ export default function LoginModal({ isOpen, onClose }) {
     newOtpDigits[index] = value;
     setOtpDigits(newOtpDigits);
 
-    // Move to next input if value is entered
-    if (value && index < 5 && otpInputRefs[index + 1]?.current) {
-      otpInputRefs[index + 1].current.focus();
-    }
-  };
-
-  const handleKeyDown = (index, e) => {
-    // Move to previous input on backspace if empty
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0 && otpInputRefs[index - 1]?.current) {
-      otpInputRefs[index - 1].current.focus();
+    // Auto-focus next input if value is entered
+    if (value && index < 5) {
+      otpInputRefs[index + 1].current?.focus();
     }
   };
 
@@ -241,25 +234,40 @@ export default function LoginModal({ isOpen, onClose }) {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').trim();
     
-    // If pasted data is a 6-digit number
-    if (/^\d{6}$/.test(pastedData)) {
-      const digits = pastedData.split('');
-      setOtpDigits(digits);
-      // Focus the last input after pasting
-      otpInputRefs[5].current?.focus();
-    } else {
-      // If it's a single digit, paste it in the current input and move to next
-      const currentIndex = parseInt(e.target.getAttribute('data-index'));
-      if (/^\d$/.test(pastedData) && currentIndex < 6) {
+    // Check if pasted content is 6 digits
+    if (!/^\d{6}$/.test(pastedData)) return;
+
+    // Split the pasted string into an array and update state
+    const digits = pastedData.split('');
+    setOtpDigits(digits);
+    
+    // Focus the last input
+    otpInputRefs[5].current?.focus();
+  };
+
+  const handleKeyDown = (index, e) => {
+    // Handle backspace
+    if (e.key === 'Backspace') {
+      if (!otpDigits[index] && index > 0) {
+        // If current input is empty and not first input, focus previous input
         const newOtpDigits = [...otpDigits];
-        newOtpDigits[currentIndex] = pastedData;
+        newOtpDigits[index - 1] = '';
         setOtpDigits(newOtpDigits);
-        
-        // Move focus to next input if available
-        if (currentIndex < 5) {
-          otpInputRefs[currentIndex + 1].current?.focus();
-        }
+        otpInputRefs[index - 1].current?.focus();
+      } else if (otpDigits[index]) {
+        // If current input has value, clear it
+        const newOtpDigits = [...otpDigits];
+        newOtpDigits[index] = '';
+        setOtpDigits(newOtpDigits);
       }
+    }
+    // Handle left arrow
+    else if (e.key === 'ArrowLeft' && index > 0) {
+      otpInputRefs[index - 1].current?.focus();
+    }
+    // Handle right arrow
+    else if (e.key === 'ArrowRight' && index < 5) {
+      otpInputRefs[index + 1].current?.focus();
     }
   };
 
@@ -500,26 +508,23 @@ export default function LoginModal({ isOpen, onClose }) {
               />
             ))}
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <button
             onClick={handleVerifyOtp}
             disabled={loading || otpDigits.some(digit => !digit)}
-            className={`w-full py-3 sm:py-2.5 mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
-              ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+            className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-sm cursor-pointer disabled:cursor-not-allowed`}
           >
             {loading ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <div className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Verifying...
+                <span>Verifying...</span>
               </div>
             ) : (
               'Verify Code'
             )}
-          </motion.button>
+          </button>
         </div>
       )}
 
@@ -549,49 +554,60 @@ export default function LoginModal({ isOpen, onClose }) {
       initial="enter"
       animate="center"
       exit="exit"
-      className="absolute inset-0 z-50 bg-white p-4 sm:p-6 rounded-2xl"
+      className="absolute inset-0 z-50 bg-white p-2 xs:p-3 sm:p-6 rounded-2xl flex flex-col"
       style={{ position: 'relative', minHeight: '100%' }}
     >
-      <div className="flex items-center justify-between mb-6 sm:mb-8">
+      <div className="flex items-center justify-between mb-2 sm:mb-8">
         <button
           onClick={() => {
             setSlideDirection(-1);
             setShowOtpScreen(false);
           }}
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-all duration-200 text-sm sm:text-base"
+          className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-all duration-200 text-xs sm:text-base"
         >
-          <Icon icon="heroicons:arrow-left-20-solid" className="w-4 h-4 sm:w-5 sm:h-5" />
+          <Icon icon="heroicons:arrow-left-20-solid" className="w-3 h-3 sm:w-5 sm:h-5" />
           <span>Back</span>
         </button>
         <button
           onClick={onClose}
-          className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          className="p-1 sm:p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
         >
-          <Icon icon="heroicons:x-mark-20-solid" className="w-4 h-4 sm:w-5 sm:h-5" />
+          <Icon icon="heroicons:x-mark-20-solid" className="w-3 h-3 sm:w-5 sm:h-5" />
         </button>
       </div>
 
-      <div className="text-center mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-          Verify your email
-        </h2>
-        <p className="text-sm sm:text-base text-gray-600">
-          We've sent a verification code to<br />
-          <span className="font-medium text-gray-900">{formData.email}</span>
-        </p>
+      <div className="text-center mb-3 sm:mb-8">
+        <div className="xs:hidden">
+          <h2 className="text-lg font-bold text-gray-900 leading-tight">
+            Verify your email
+          </h2>
+          <p className="text-xs text-gray-600 mt-0.5">
+            Code sent to<br />
+            <span className="font-medium text-gray-900">{formData.email}</span>
+          </p>
+        </div>
+        <div className="hidden xs:block">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
+            Verify your email
+          </h2>
+          <p className="text-sm sm:text-base text-gray-600">
+            We've sent a verification code to<br />
+            <span className="font-medium text-gray-900">{formData.email}</span>
+          </p>
+        </div>
         <button
           onClick={() => {
             setSlideDirection(-1);
             setShowOtpScreen(false);
           }}
-          className="mt-2 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
+          className="mt-1 sm:mt-2 text-[10px] sm:text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
         >
           Change email address?
         </button>
       </div>
 
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex justify-center gap-2 sm:gap-3">
+      <div className="flex-1 flex flex-col justify-start space-y-3 sm:space-y-6">
+        <div className="flex justify-center gap-1.5 sm:gap-3 mb-8 sm:mb-6">
           {otpDigits.map((digit, index) => (
             <input
               key={index}
@@ -606,32 +622,29 @@ export default function LoginModal({ isOpen, onClose }) {
               onPaste={handlePaste}
               data-index={index}
               onFocus={preventScrollBehavior}
-              className={`w-9 h-10 sm:w-12 sm:h-12 text-center text-lg sm:text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-2 focus:ring-offset-0`}
+              className={`w-[38px] h-[38px] sm:w-12 sm:h-12 text-center text-lg sm:text-xl font-semibold text-gray-900 border rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 focus:ring-offset-0 p-0 shadow-sm`}
               ref={otpInputRefs[index]}
             />
           ))}
         </div>
 
-        <motion.button
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.6 }}
+        <button
           onClick={handleVerifyOtp}
           disabled={loading || otpDigits.some(digit => !digit)}
-          className={`w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
+          className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm sm:text-base text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-sm cursor-pointer disabled:cursor-not-allowed`}
         >
           {loading ? (
-            <div className="flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span className="text-sm sm:text-base">Verifying...</span>
+              <span>Verifying...</span>
             </div>
           ) : (
             'Verify Email'
           )}
-        </motion.button>
+        </button>
 
         <motion.div
           initial={{ opacity: 0 }}
@@ -642,7 +655,7 @@ export default function LoginModal({ isOpen, onClose }) {
           <button
             onClick={handleFormSubmit}
             disabled={loading}
-            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75"
+            className="text-[10px] xs:text-xs sm:text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75 hover:underline"
           >
             Didn't receive the code? Resend
           </button>
@@ -654,352 +667,248 @@ export default function LoginModal({ isOpen, onClose }) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
+        <>
           <motion.div
-            className="relative w-full max-w-md p-6 bg-white rounded-2xl shadow-xl"
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ type: "spring", duration: 0.5 }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onMouseDown={preventScrollBehavior}
-            onFocus={preventScrollBehavior}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-6 overflow-hidden"
           >
-            <AnimatePresence mode="wait" custom={slideDirection}>
-              {showOtpScreen ? (
-                <motion.div
-                  key="otp-screen"
-                  custom={slideDirection}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  className="absolute inset-0 z-50 bg-white p-6 rounded-2xl"
-                  style={{ position: 'relative', minHeight: '100%' }}
-                >
-                  <div className="flex items-center justify-between mb-8">
-                    <button
-                      onClick={() => {
-                        setSlideDirection(-1);
-                        setShowOtpScreen(false);
-                      }}
-                      className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-all duration-200"
-                    >
-                      <Icon icon="heroicons:arrow-left-20-solid" className="w-5 h-5" />
-                      <span>Back to signup</span>
-                    </button>
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl relative overflow-hidden min-h-[360px] xs:min-h-[400px] sm:min-h-[520px]">
+              <AnimatePresence mode="wait" initial={false}>
+                {showOtpScreen ? (
+                  renderOtpScreen()
+                ) : (
+                  <motion.div
+                    key="signup-screen"
+                    custom={slideDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    className="relative p-6"
+                    style={{ minHeight: '100%' }}
+                  >
                     <button
                       onClick={onClose}
-                      className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                      className="absolute right-4 top-4 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-lg p-1"
                     >
                       <Icon icon="heroicons:x-mark-20-solid" className="w-5 h-5" />
                     </button>
-                  </div>
 
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Verify your email
-                    </h2>
-                    <p className="text-gray-600">
-                      We've sent a verification code to<br />
-                      <span className="font-medium text-gray-900">{formData.email}</span>
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSlideDirection(-1);
-                        setShowOtpScreen(false);
-                      }}
-                      className="mt-2 text-sm text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
-                    >
-                      Change email address?
-                    </button>
-                  </div>
+                    <div className="text-center mb-8">
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        {isResetPassword ? 'Reset Password' : isLogin ? 'Welcome Back!' : 'Create Account'}
+                      </h2>
+                      <p className="mt-2 text-sm text-gray-500">
+                        {isResetPassword
+                          ? 'Enter your email to reset your password'
+                          : isLogin
+                          ? 'Sign in to your account'
+                          : 'Sign up for a new account'}
+                      </p>
+                    </div>
 
-                  <div className="space-y-6">
-                    <div className="flex justify-center space-x-3">
-                      {otpDigits.map((digit, index) => (
-                        <input
-                          key={index}
-                          id={`otp-${index}`}
-                          type="text"
-                          maxLength="1"
-                          value={digit}
-                          onChange={(e) => handleOtpChange(index, e.target.value)}
-                          onKeyDown={(e) => handleKeyDown(index, e)}
-                          onPaste={handlePaste}
-                          data-index={index}
-                          onFocus={preventScrollBehavior}
-                          className={`w-12 h-12 text-center text-xl font-semibold text-gray-900 border-2 rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500`}
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mb-4 backdrop-blur-md bg-red-50/30 border border-red-100 rounded-xl overflow-hidden"
+                      >
+                        <div className="px-4 py-3 flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            <svg 
+                              className="h-5 w-5 text-red-400" 
+                              viewBox="0 0 24 24" 
+                              fill="none" 
+                              stroke="currentColor"
+                            >
+                              <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                              <path d="M12 8v4m0 4h.01" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                          </div>
+                          <div className="flex-1 text-sm text-red-600">
+                            <motion.p
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.1 }}
+                            >
+                              {error}
+                            </motion.p>
+                          </div>
+                        </div>
+                        <div 
+                          className="h-1 bg-gradient-to-r from-red-300/50 to-red-400/50"
+                          style={{
+                            clipPath: 'polygon(0 0, 100% 0, 98% 100%, 2% 100%)'
+                          }}
                         />
-                      ))}
-                    </div>
+                      </motion.div>
+                    )}
+                    {!isResetPassword && (
+                      <div className="mb-6">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleGoogleSignIn}
+                          disabled={loading}
+                          className="w-full flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed"
+                        >
+                          <Icon icon="flat-color-icons:google" className="w-5 h-5 mr-2" />
+                          Continue with Google
+                        </motion.button>
 
-                    <motion.button
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.6 }}
-                      onClick={handleVerifyOtp}
-                      disabled={loading || otpDigits.some(digit => !digit)}
-                      className={`w-full px-4 py-3 sm:py-2.5 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:hover:scale-100 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`}
-                    >
-                      {loading ? (
-                        <div className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Verifying...
-                        </div>
-                      ) : (
-                        'Verify Email'
-                      )}
-                    </motion.button>
-
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.7 }}
-                      className="text-center"
-                    >
-                      <button
-                        onClick={handleFormSubmit}
-                        disabled={loading}
-                        className="text-sm text-blue-600 hover:text-blue-700 focus:outline-none disabled:opacity-75"
-                      >
-                        Didn't receive the code? Resend
-                      </button>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="signup-screen"
-                  custom={slideDirection}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  className="relative p-6"
-                  style={{ minHeight: '100%' }}
-                >
-                  <button
-                    onClick={onClose}
-                    className="absolute right-4 top-4 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-lg p-1"
-                  >
-                    <Icon icon="heroicons:x-mark-20-solid" className="w-5 h-5" />
-                  </button>
-
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {isResetPassword ? 'Reset Password' : isLogin ? 'Welcome Back!' : 'Create Account'}
-                    </h2>
-                    <p className="mt-2 text-sm text-gray-500">
-                      {isResetPassword
-                        ? 'Enter your email to reset your password'
-                        : isLogin
-                        ? 'Sign in to your account'
-                        : 'Sign up for a new account'}
-                    </p>
-                  </div>
-
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="mb-4 backdrop-blur-md bg-red-50/30 border border-red-100 rounded-xl overflow-hidden"
-                    >
-                      <div className="px-4 py-3 flex items-center gap-3">
-                        <div className="flex-shrink-0">
-                          <svg 
-                            className="h-5 w-5 text-red-400" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor"
-                          >
-                            <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-                            <path d="M12 8v4m0 4h.01" strokeWidth="2" strokeLinecap="round"/>
-                          </svg>
-                        </div>
-                        <div className="flex-1 text-sm text-red-600">
-                          <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.1 }}
-                          >
-                            {error}
-                          </motion.p>
+                        <div className="relative mt-6">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300" />
+                          </div>
+                          <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+                          </div>
                         </div>
                       </div>
-                      <div 
-                        className="h-1 bg-gradient-to-r from-red-300/50 to-red-400/50"
-                        style={{
-                          clipPath: 'polygon(0 0, 100% 0, 98% 100%, 2% 100%)'
-                        }}
-                      />
-                    </motion.div>
-                  )}
-                  {!isResetPassword && (
-                    <div className="mb-6">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleGoogleSignIn}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-75 disabled:cursor-not-allowed"
-                      >
-                        <Icon icon="flat-color-icons:google" className="w-5 h-5 mr-2" />
-                        Continue with Google
-                      </motion.button>
+                    )}
 
-                      <div className="relative mt-6">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-gray-300" />
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                          <span className="px-2 bg-white text-gray-500">Or continue with email</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    {isResetPassword ? (
+                      renderResetPassword()
+                    ) : (
+                      <form onSubmit={handleFormSubmit} className="space-y-4">
+                        {!isLogin && (
+                          <div className="mb-4">
+                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                              Full Name
+                            </label>
+                            <input
+                              type="text"
+                              id="name"
+                              name="name"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                              className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
+                                ${fieldErrors.name ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                                outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                              required
+                              placeholder="Enter your full name"
+                            />
+                          </div>
+                        )}
 
-                  {isResetPassword ? (
-                    renderResetPassword()
-                  ) : (
-                    <form onSubmit={handleFormSubmit} className="space-y-4">
-                      {!isLogin && (
                         <div className="mb-4">
-                          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                            Full Name
+                          <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
+                            Email Address
                           </label>
                           <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value={formData.name}
+                            type="email"
+                            id="login-email"
+                            name="email"
+                            value={formData.email}
                             onChange={handleInputChange}
                             className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                              ${fieldErrors.name ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                              ${fieldErrors.email ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
                               outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                            placeholder="Enter your email"
                             required
-                            placeholder="Enter your full name"
                           />
                         </div>
-                      )}
 
-                      <div className="mb-4">
-                        <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
-                          Email Address
-                        </label>
-                        <input
-                          type="email"
-                          id="login-email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                            ${fieldErrors.email ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
-                            outline-none shadow-sm text-gray-900 placeholder-gray-400`}
-                          placeholder="Enter your email"
-                          required
-                        />
-                      </div>
-
-                      <div className="mb-4">
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                          Password
-                        </label>
-                        <input
-                          type="password"
-                          id="password"
-                          name="password"
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                            ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
-                            outline-none shadow-sm text-gray-900 placeholder-gray-400`}
-                          placeholder={isLogin ? "Enter your password" : "Create a password"}
-                          required
-                        />
-                      </div>
-
-                      {isLogin && (
-                        <div className="text-sm">
-                          <button
-                            type="button"
-                            onClick={() => setIsResetPassword(true)}
-                            className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition-colors duration-200"
-                          >
-                            Forgot your password?
-                          </button>
+                        <div className="mb-4">
+                          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                            Password
+                          </label>
+                          <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
+                              ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'}
+                              outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                            placeholder={isLogin ? "Enter your password" : "Create a password"}
+                            required
+                          />
                         </div>
-                      )}
 
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleFormSubmit(e);
-                        }}
-                        className={`w-full flex justify-center py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
-                          ${error ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : ''} 
-                          ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-                      >
-                        {loading ? (
-                          <div className="flex items-center justify-center">
-                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            {isLogin ? 'Signing In...' : 'Sending OTP...'}
+                        {isLogin && (
+                          <div className="text-sm">
+                            <button
+                              type="button"
+                              onClick={() => setIsResetPassword(true)}
+                              className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition-colors duration-200"
+                            >
+                              Forgot your password?
+                            </button>
                           </div>
-                        ) : isLogin ? (
-                          'Sign In'
-                        ) : (
-                          'Sign Up'
                         )}
+
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleFormSubmit(e);
+                          }}
+                          className={`w-full flex justify-center py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all
+                            ${error ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : ''} 
+                            ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                        >
+                          {loading ? (
+                            <div className="flex items-center justify-center">
+                              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              {isLogin ? 'Signing In...' : 'Sending OTP...'}
+                            </div>
+                          ) : isLogin ? (
+                            'Sign In'
+                          ) : (
+                            'Sign Up'
+                          )}
+                        </button>
+                      </form>
+                    )}
+                    <p className="mt-6 text-center text-sm text-gray-500">
+                      {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLogin(!isLogin);
+                          setError('');
+                          setFieldErrors({
+                            email: false,
+                            password: false,
+                            name: false
+                          });
+                          setFormData({
+                            name: '',
+                            email: '',
+                            password: ''
+                          });
+                          setShowOtpScreen(false);
+                          setOtpDigits(['', '', '', '', '', '']);
+                        }}
+                        className="font-medium text-indigo-600 hover:text-indigo-500"
+                      >
+                        {isLogin ? 'Sign up' : 'Sign in'}
                       </button>
-                    </form>
-                  )}
-                  <p className="mt-6 text-center text-sm text-gray-500">
-                    {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsLogin(!isLogin);
-                        setError('');
-                        setFieldErrors({
-                          email: false,
-                          password: false,
-                          name: false
-                        });
-                        setFormData({
-                          name: '',
-                          email: '',
-                          password: ''
-                        });
-                        setShowOtpScreen(false);
-                        setOtpDigits(['', '', '', '', '', '']);
-                      }}
-                      className="font-medium text-indigo-600 hover:text-indigo-500"
-                    >
-                      {isLogin ? 'Sign up' : 'Sign in'}
-                    </button>
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
