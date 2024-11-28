@@ -59,10 +59,6 @@ const nextConfig = {
     }
 
     return headers;
-  },
-  webpack(config) {
-    config.devtool = 'source-map';
-    return config;
   }
 };
 

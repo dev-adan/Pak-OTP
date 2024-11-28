@@ -110,7 +110,7 @@ const handler = NextAuth({
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         secure: true,
-        domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
+        domain: process.env.NODE_ENV === 'production' ? 'pak-otp.vercel.app' : undefined
       }
     }
   },
