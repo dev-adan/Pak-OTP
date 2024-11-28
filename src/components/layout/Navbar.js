@@ -75,7 +75,7 @@ export default function Navbar({ onLoginClick }) {
             {session ? (
               <>
                 <Link
-                  href="/dashboard"
+                  href={{ pathname: '/dashboard' }}
                   className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white px-6 py-2 rounded-lg font-medium hover:from-indigo-700 hover:to-blue-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
                   Dashboard
@@ -157,7 +157,7 @@ export default function Navbar({ onLoginClick }) {
               {session ? (
                 <>
                   <Link
-                    href="/dashboard"
+                    href={{ pathname: '/dashboard' }}
                     className="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
                   >
                     Dashboard

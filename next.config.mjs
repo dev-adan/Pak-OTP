@@ -32,7 +32,15 @@ const nextConfig = {
         ]
       }
     ];
-  }
+  },
+  webpack(config, { dev }) {
+    if (dev) {
+      config.devtool = 'source-map';
+    } else {
+      config.devtool = 'hidden-source-map';
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

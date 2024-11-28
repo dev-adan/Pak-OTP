@@ -13,17 +13,17 @@ export default withAuth(
     const isAuth = !!token;
     const pathname = req.nextUrl.pathname;
 
+    // If accessing protected route while logged in, proceed without redirect
+    if (isAuth && isProtectedRoute(pathname)) {
+      return NextResponse.next();
+    }
+
     // If accessing dashboard without auth, redirect to home with login modal
     if (isProtectedRoute(pathname) && !isAuth) {
       const redirectUrl = new URL('/', req.url);
       redirectUrl.searchParams.set('showLogin', 'true');
       redirectUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(redirectUrl);
-    }
-
-    // If accessing auth pages while logged in, redirect to dashboard
-    if (pathname === '/' && isAuth) {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
     // Handle admin routes
@@ -36,7 +36,7 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token }) => {
-        return true; // Let the middleware function handle the auth logic
+        return !!token; // Ensure token presence for authorization
       },
     },
     pages: {
