@@ -363,11 +363,11 @@ export default function Settings() {
                           {/* Device Icon with Effects */}
                           <div className="relative">
                             <div className={`absolute inset-0 bg-gradient-to-br from-${device.color}-500 to-${device.color}-400 rounded-lg opacity-10 animate-pulse`} />
-                            <div className="relative p-3 bg-white rounded-lg shadow-sm">
+                            <div className="relative p-2 xs:p-3 bg-white rounded-lg shadow-sm">
                               <div className="relative">
                                 <Icon 
                                   icon={device.icon}
-                                  className={`w-6 h-6 text-${device.color}-600`}
+                                  className={`w-5 h-5 xs:w-6 xs:h-6 text-${device.color}-600`}
                                 />
                                 {isActive && (
                                   <motion.div 
@@ -375,7 +375,7 @@ export default function Settings() {
                                     transition={{ duration: 2, repeat: Infinity }}
                                     className="absolute -top-1 -right-1"
                                   >
-                                    <div className="w-3 h-3 bg-green-500 rounded-full">
+                                    <div className="w-2 h-2 xs:w-3 xs:h-3 bg-green-500 rounded-full">
                                       <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75" />
                                     </div>
                                   </motion.div>
@@ -402,11 +402,11 @@ export default function Settings() {
                             </div>
 
                             {/* Essential Session Details */}
-                            <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs xs:text-sm text-gray-500">
                               {/* Last Active */}
                               <div className="flex items-center space-x-1">
-                                <Icon icon="solar:clock-circle-bold-duotone" className={`w-4 h-4 text-${device.color}-500`} />
-                                <span>Active {lastActiveTime}</span>
+                                <Icon icon="solar:clock-circle-bold-duotone" className={`w-3.5 h-3.5 xs:w-4 xs:h-4 text-${device.color}-500`} />
+                                <span className="text-[11px] xs:text-sm">Active {lastActiveTime}</span>
                               </div>
                             </div>
                           </div>
@@ -423,15 +423,15 @@ export default function Settings() {
                           </div>
 
                           {/* Actions */}
-                          <div className="flex items-center space-x-1">
-                            {/* Info Button with Floating Tooltip */}
-                            <div className="relative inline-block">
+                          <div className="flex items-center space-x-1.5">
+                            {/* Info Button with Floating Tooltip - Hidden on Mobile */}
+                            <div className="hidden sm:inline-block relative">
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 className="p-2 text-gray-400 hover:text-indigo-500 rounded-lg hover:bg-indigo-50 transition-colors"
                               >
-                                <Icon icon="solar:info-circle-bold-duotone" className="w-5 h-5" />
+                                <Icon icon="solar:info-circle-bold-duotone" className="w-4 h-4 xs:w-5 xs:h-5" />
                               </motion.button>
                               
                               {/* Floating Session Details */}
