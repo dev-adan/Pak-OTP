@@ -21,6 +21,10 @@ export default function ContactUs() {
     setError('');
     
     try {
+      if (!formData.name || !formData.email || !formData.message) {
+        throw new Error('Please fill in all required fields');
+      }
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
@@ -29,19 +33,23 @@ export default function ContactUs() {
         body: JSON.stringify(formData),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || errorData.error || 'Failed to send message');
+      }
+
       const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.details || data.error || 'Failed to send message');
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to send message');
       }
 
       setShowSuccess(true);
-      // Keep success message visible for longer to show the animation
-      setTimeout(() => setShowSuccess(false), 5000);
       setFormData({ name: '', email: '', phone: '', message: '' });
+      setTimeout(() => setShowSuccess(false), 5000);
     } catch (error) {
-      console.error('Error:', error);
-      setError(error.message);
+      console.error('Contact form error:', error);
+      setError(error.message || 'Failed to send message. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

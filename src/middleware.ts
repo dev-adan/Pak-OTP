@@ -8,13 +8,16 @@ export async function middleware(request: NextRequest) {
   // Check if accessing protected routes
   if (request.nextUrl.pathname.startsWith('/dashboard')) {
     if (!session) {
+      // Store the attempted URL to redirect back after login
       const loginUrl = new URL('/?showLogin=true', request.url);
+      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
       return NextResponse.redirect(loginUrl);
     }
 
     // Additional session validation
     if (!session.email || !session.sub) {
       const loginUrl = new URL('/?showLogin=true', request.url);
+      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
       return NextResponse.redirect(loginUrl);
     }
 

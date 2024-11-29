@@ -2,29 +2,33 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
 export async function POST(req) {
+  if (!req.body) {
+    return NextResponse.json({ error: 'No request body' }, { status: 400 });
+  }
+
   try {
     const { name, email, phone, message } = await req.json();
 
-    console.log('Creating transporter with:', {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ''), // Remove spaces from password
-    });
+    if (!name || !email || !message) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
 
-    // Create a transporter using Gmail SMTP
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
       auth: {
         user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ''), // Remove spaces from password
+        pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ''),
       },
       tls: {
         rejectUnauthorized: false
       }
     });
 
-    // Email content
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to: process.env.GMAIL_USER,
@@ -39,26 +43,24 @@ export async function POST(req) {
       `,
     };
 
-    console.log('Attempting to send email...');
-    
-    // Send email
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info);
 
-    return NextResponse.json({ success: true, info });
+    return NextResponse.json({
+      success: true,
+      message: 'Email sent successfully',
+      messageId: info.messageId
+    });
   } catch (error) {
-    console.error('Detailed error:', {
+    console.error('Contact form error:', {
       message: error.message,
       stack: error.stack,
-      code: error.code,
-      response: error.response
     });
     
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to send email',
-        details: error.message,
-        code: error.code 
+        message: error.message
       },
       { status: 500 }
     );
