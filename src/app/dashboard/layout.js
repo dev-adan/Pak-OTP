@@ -5,8 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import Logo from '@/components/shared/Logo';
+import PageTransition from '@/components/shared/PageTransition';
 
 function DashboardContent({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -108,7 +110,7 @@ function DashboardContent({ children }) {
           {/* Logo Section */}
           <div className="h-16 flex items-center justify-between px-4">
             <div className="flex items-center">
-              <Logo href="/dashboard" showText={isSidebarOpen || isMobileView} />
+              <Logo showText={isSidebarOpen || isMobileView} />
             </div>
             {!isMobileView && (
               <button

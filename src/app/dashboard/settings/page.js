@@ -28,6 +28,7 @@ export default function Settings() {
   const [mounted, setMounted] = useState(false);
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [loadingSessions, setLoadingSessions] = useState(true);
 
   useEffect(() => {
     setMounted(true);
@@ -59,6 +60,7 @@ export default function Settings() {
   useEffect(() => {
     if (session) {
       const fetchSessions = async () => {
+        setLoadingSessions(true);
         try {
           const res = await fetch('/api/auth/sessions');
           const data = await res.json();
@@ -77,6 +79,8 @@ export default function Settings() {
         } catch (error) {
           toast.error('Failed to fetch sessions');
           addLog('Failed to fetch active sessions', 'error');
+        } finally {
+          setLoadingSessions(false);
         }
       };
       fetchSessions();
@@ -382,197 +386,23 @@ export default function Settings() {
                 </div>
 
                 <div className="grid gap-4">
-                  {sessions.map((session, index) => {
-                    const { device, browserIcon } = getDeviceInfo(session);
-                    const isActive = session.active || session.current;
-                    const lastActiveTime = formatTimeAgo(session.lastAccessed);
-                    const createdTime = new Date(session.createdAt).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    });
-                    
-                    return (
-                      <motion.div 
-                        key={session._id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="relative group"
-                        onMouseEnter={() => {
-                          console.log('Mouse entered session card');
-                          setTooltipVisible(true);
-                        }}
-                        onMouseLeave={() => {
-                          console.log('Mouse left session card');
-                          setTooltipVisible(false);
-                        }}
-                        onMouseMove={handleMouseMove}
-                      >
-                        {/* Tooltip */}
-                        {tooltipVisible && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ 
-                              opacity: 1,
-                              scale: 1,
-                              transition: {
-                                type: "spring",
-                                stiffness: 300,
-                                damping: 20
-                              }
-                            }}
-                            style={{
-                              position: 'fixed',
-                              left: `${tooltipPosition.x + 15}px`,
-                              top: `${tooltipPosition.y + 15}px`,
-                              zIndex: 9999,
-                              pointerEvents: 'none'
-                            }}
-                            className="w-[280px] bg-white rounded-xl shadow-xl shadow-indigo-500/10 
-                                     border border-indigo-100 overflow-hidden transform origin-top-left"
-                          >
-                            <div className="p-4 space-y-3">
-                              {/* IP Address */}
-                              <div className="flex items-center space-x-3">
-                                <div className="p-2 bg-indigo-50 rounded-lg">
-                                  <Icon icon="solar:ip-bold-duotone" className="w-4 h-4 text-indigo-600" />
-                                </div>
-                                <div>
-                                  <div className="text-xs font-medium text-gray-500">IP Address</div>
-                                  <div className="text-sm text-gray-900">{session?.ipAddress || 'Unknown'}</div>
-                                </div>
-                              </div>
-
-                              {/* Created At */}
-                              <div className="flex items-center space-x-3">
-                                <div className="p-2 bg-emerald-50 rounded-lg">
-                                  <Icon icon="solar:calendar-bold-duotone" className="w-4 h-4 text-emerald-600" />
-                                </div>
-                                <div>
-                                  <div className="text-xs font-medium text-gray-500">Created</div>
-                                  <div className="text-sm text-gray-900">{createdTime}</div>
-                                </div>
-                              </div>
-
-                              {/* Last Access */}
-                              <div className="flex items-center space-x-3">
-                                <div className="p-2 bg-purple-50 rounded-lg">
-                                  <Icon icon="solar:clock-circle-bold-duotone" className="w-4 h-4 text-purple-600" />
-                                </div>
-                                <div>
-                                  <div className="text-xs font-medium text-gray-500">Last Access</div>
-                                  <div className="text-sm text-gray-900">{lastActiveTime}</div>
-                                </div>
-                              </div>
+                  {loadingSessions ? (
+                    <div className="space-y-4">
+                      {[1, 2].map((n) => (
+                        <div key={n} className="bg-gray-50 rounded-xl p-4 animate-pulse">
+                          <div className="flex items-start space-x-4">
+                            <div className="w-12 h-12 bg-gray-200 rounded-lg" />
+                            <div className="flex-1 space-y-3">
+                              <div className="h-4 bg-gray-200 rounded w-1/4" />
+                              <div className="h-3 bg-gray-200 rounded w-2/3" />
+                              <div className="h-3 bg-gray-200 rounded w-1/2" />
                             </div>
-                            
-                            {/* Elegant bottom border */}
-                            <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-                          </motion.div>
-                        )}
-
-                        {/* Main Content */}
-                        <div className="relative flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100 
-                                    hover:border-indigo-200 hover:bg-gradient-to-br hover:from-white hover:to-indigo-50/30 
-                                    transition-all duration-300 group-hover:shadow-lg group-hover:shadow-indigo-500/10">
-                          <div className="flex items-center space-x-4">
-                            {/* Device Icon with Effects */}
-                            <div className="relative">
-                              <div className={`absolute inset-0 bg-gradient-to-br from-${isActive ? 'indigo' : 'gray'}-500 to-${isActive ? 'indigo' : 'gray'}-400 rounded-lg opacity-10 group-hover:animate-pulse`} />
-                              <div className="relative p-3 xs:p-4 bg-white rounded-lg shadow-sm">
-                                <div className="relative">
-                                  <Icon 
-                                    icon={device.icon || (device.type === 'mobile' ? 'solar:smartphone-bold-duotone' : 'solar:desktop-bold-duotone')}
-                                    className={`w-7 h-7 xs:w-8 xs:h-8 text-${isActive ? 'indigo' : 'gray'}-600`}
-                                  />
-                                  {isActive && (
-                                    <motion.div 
-                                      animate={{ scale: [1, 1.2, 1] }}
-                                      transition={{ duration: 2, repeat: Infinity }}
-                                      className="absolute -top-1 -right-1"
-                                    >
-                                      <div className="w-2.5 h-2.5 xs:w-3 xs:h-3 bg-green-500 rounded-full">
-                                        <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75" />
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Device Info */}
-                            <div>
-                              <div className="flex items-center space-x-2">
-                                <h3 className="font-medium text-gray-900">
-                                  {device.name || session.deviceInfo?.os || 'Unknown Device'}
-                                </h3>
-                                {session.current && (
-                                  <motion.span 
-                                    initial={{ opacity: 0, scale: 0.5 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="px-2 py-0.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-full border border-indigo-100"
-                                  >
-                                    Current Device
-                                  </motion.span>
-                                )}
-                              </div>
-                              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs xs:text-sm text-gray-500">
-                                {/* Browser Info */}
-                                <div className="flex items-center space-x-1.5">
-                                  <Icon icon={browserIcon} className="w-4 h-4" />
-                                  <span>{session.deviceInfo?.browser || 'Unknown Browser'}</span>
-                                </div>
-                                {/* OS Info */}
-                                <div className="flex items-center space-x-1.5">
-                                  <Icon 
-                                    icon={session.os?.toLowerCase().includes('windows') ? 'ri:windows-fill' : 
-                                         session.os?.toLowerCase().includes('mac') ? 'ri:apple-fill' : 
-                                         session.os?.toLowerCase().includes('linux') ? 'ri:ubuntu-fill' : 
-                                         'solar:laptop-bold-duotone'} 
-                                    className="w-4 h-4" 
-                                  />
-                                  <span>{session.deviceInfo?.os || 'Unknown OS'}</span>
-                                </div>
-                                {/* Last Active */}
-                                <div className="flex items-center space-x-1.5">
-                                  <Icon icon="solar:clock-circle-bold-duotone" className="w-4 h-4" />
-                                  <span>Active {formatTimeAgo(session.lastAccessed)}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center space-x-1.5">
-                            {!session.current && (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleLogoutSession(session._id)}
-                                disabled={revoking}
-                                className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-                              >
-                                <Icon 
-                                  icon="solar:logout-2-bold-duotone" 
-                                  className="w-5 h-5" 
-                                />
-                              </motion.button>
-                            )}
                           </div>
                         </div>
-                      </motion.div>
-                    );
-                  })}
-
-                  {/* Empty State */}
-                  {sessions.length === 0 && (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center py-12"
-                    >
+                      ))}
+                    </div>
+                  ) : sessions.length === 0 ? (
+                    <div className="text-center py-12">
                       <div className="relative w-20 h-20 mx-auto mb-4">
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full animate-pulse" />
                         <div className="relative w-full h-full rounded-full bg-white flex items-center justify-center">
@@ -581,7 +411,193 @@ export default function Settings() {
                       </div>
                       <h3 className="text-lg font-medium text-gray-900 mb-1">No Active Sessions</h3>
                       <p className="text-gray-500">You currently have no active sessions on your account</p>
-                    </motion.div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {sessions.map((session, index) => {
+                        const { device, browserIcon } = getDeviceInfo(session);
+                        const isActive = session.active || session.current;
+                        const lastActiveTime = formatTimeAgo(session.lastAccessed);
+                        const createdTime = new Date(session.createdAt).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+                        
+                        return (
+                          <motion.div 
+                            key={session._id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="relative group"
+                            onMouseEnter={() => {
+                              console.log('Mouse entered session card');
+                              setTooltipVisible(true);
+                            }}
+                            onMouseLeave={() => {
+                              console.log('Mouse left session card');
+                              setTooltipVisible(false);
+                            }}
+                            onMouseMove={handleMouseMove}
+                          >
+                            {/* Tooltip */}
+                            {tooltipVisible && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ 
+                                  opacity: 1,
+                                  scale: 1,
+                                  transition: {
+                                    type: "spring",
+                                    stiffness: 300,
+                                    damping: 20
+                                  }
+                                }}
+                                style={{
+                                  position: 'fixed',
+                                  left: `${tooltipPosition.x + 15}px`,
+                                  top: `${tooltipPosition.y + 15}px`,
+                                  zIndex: 9999,
+                                  pointerEvents: 'none'
+                                }}
+                                className="w-[280px] bg-white rounded-xl shadow-xl shadow-indigo-500/10 
+                                         border border-indigo-100 overflow-hidden transform origin-top-left"
+                              >
+                                <div className="p-4 space-y-3">
+                                  {/* IP Address */}
+                                  <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-indigo-50 rounded-lg">
+                                      <Icon icon="solar:ip-bold-duotone" className="w-4 h-4 text-indigo-600" />
+                                    </div>
+                                    <div>
+                                      <div className="text-xs font-medium text-gray-500">IP Address</div>
+                                      <div className="text-sm text-gray-900">{session?.ipAddress || 'Unknown'}</div>
+                                    </div>
+                                  </div>
+
+                                  {/* Created At */}
+                                  <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-emerald-50 rounded-lg">
+                                      <Icon icon="solar:calendar-bold-duotone" className="w-4 h-4 text-emerald-600" />
+                                    </div>
+                                    <div>
+                                      <div className="text-xs font-medium text-gray-500">Created</div>
+                                      <div className="text-sm text-gray-900">{createdTime}</div>
+                                    </div>
+                                  </div>
+
+                                  {/* Last Access */}
+                                  <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-purple-50 rounded-lg">
+                                      <Icon icon="solar:clock-circle-bold-duotone" className="w-4 h-4 text-purple-600" />
+                                    </div>
+                                    <div>
+                                      <div className="text-xs font-medium text-gray-500">Last Access</div>
+                                      <div className="text-sm text-gray-900">{lastActiveTime}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Elegant bottom border */}
+                                <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+                              </motion.div>
+                            )}
+
+                            {/* Main Content */}
+                            <div className="relative flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100 
+                                        hover:border-indigo-200 hover:bg-gradient-to-br hover:from-white hover:to-indigo-50/30 
+                                        transition-all duration-300 group-hover:shadow-lg group-hover:shadow-indigo-500/10">
+                              <div className="flex items-center space-x-4">
+                                {/* Device Icon with Effects */}
+                                <div className="relative">
+                                  <div className={`absolute inset-0 bg-gradient-to-br from-${isActive ? 'indigo' : 'gray'}-500 to-${isActive ? 'indigo' : 'gray'}-400 rounded-lg opacity-10 group-hover:animate-pulse`} />
+                                  <div className="relative p-3 xs:p-4 bg-white rounded-lg shadow-sm">
+                                    <div className="relative">
+                                      <Icon 
+                                        icon={device.icon || (device.type === 'mobile' ? 'solar:smartphone-bold-duotone' : 'solar:desktop-bold-duotone')}
+                                        className={`w-7 h-7 xs:w-8 xs:h-8 text-${isActive ? 'indigo' : 'gray'}-600`}
+                                      />
+                                      {isActive && (
+                                        <motion.div 
+                                          animate={{ scale: [1, 1.2, 1] }}
+                                          transition={{ duration: 2, repeat: Infinity }}
+                                          className="absolute -top-1 -right-1"
+                                        >
+                                          <div className="w-2.5 h-2.5 xs:w-3 xs:h-3 bg-green-500 rounded-full">
+                                            <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75" />
+                                          </div>
+                                        </motion.div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Device Info */}
+                                <div>
+                                  <div className="flex items-center space-x-2">
+                                    <h3 className="font-medium text-gray-900">
+                                      {device.name || session.deviceInfo?.os || 'Unknown Device'}
+                                    </h3>
+                                    {session.current && (
+                                      <motion.span 
+                                        initial={{ opacity: 0, scale: 0.5 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="px-2 py-0.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-full border border-indigo-100"
+                                      >
+                                        Current Device
+                                      </motion.span>
+                                    )}
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs xs:text-sm text-gray-500">
+                                    {/* Browser Info */}
+                                    <div className="flex items-center space-x-1.5">
+                                      <Icon icon={browserIcon} className="w-4 h-4" />
+                                      <span>{session.deviceInfo?.browser || 'Unknown Browser'}</span>
+                                    </div>
+                                    {/* OS Info */}
+                                    <div className="flex items-center space-x-1.5">
+                                      <Icon 
+                                        icon={session.os?.toLowerCase().includes('windows') ? 'ri:windows-fill' : 
+                                             session.os?.toLowerCase().includes('mac') ? 'ri:apple-fill' : 
+                                             session.os?.toLowerCase().includes('linux') ? 'ri:ubuntu-fill' : 
+                                             'solar:laptop-bold-duotone'} 
+                                        className="w-4 h-4" 
+                                      />
+                                      <span>{session.deviceInfo?.os || 'Unknown OS'}</span>
+                                    </div>
+                                    {/* Last Active */}
+                                    <div className="flex items-center space-x-1.5">
+                                      <Icon icon="solar:clock-circle-bold-duotone" className="w-4 h-4" />
+                                      <span>Active {formatTimeAgo(session.lastAccessed)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center space-x-1.5">
+                                {!session.current && (
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleLogoutSession(session._id)}
+                                    disabled={revoking}
+                                    className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                                  >
+                                    <Icon 
+                                      icon="solar:logout-2-bold-duotone" 
+                                      className="w-5 h-5" 
+                                    />
+                                  </motion.button>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
 

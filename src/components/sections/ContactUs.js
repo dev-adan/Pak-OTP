@@ -271,7 +271,7 @@ export default function ContactUs() {
                         value={formData.phone}
                         onChange={handleChange}
                         pattern="[0-9+\-\s]*"
-                        className="block w-full pl-12 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
+                        className="block w-full pl-4 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
                         placeholder="0336-5555000"
                       />
                     </div>
