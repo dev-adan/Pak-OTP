@@ -7,6 +7,8 @@ export default function LoginHandler() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    if (!searchParams) return;
+
     // Check for showLogin parameter and open modal if present
     if (searchParams.get('showLogin') === 'true') {
       window.dispatchEvent(new CustomEvent('openLoginModal'));

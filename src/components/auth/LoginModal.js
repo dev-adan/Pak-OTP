@@ -174,7 +174,7 @@ export default function LoginModal({ isOpen, onClose }) {
         setLoading(true);
         
         // Get the callback URL from URL params or use default
-        const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+        const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
         
         const result = await signIn('credentials', {
           email: formData.email,
