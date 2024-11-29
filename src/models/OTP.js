@@ -1,19 +1,38 @@
 import mongoose from 'mongoose';
 
-const OTPSchema = new mongoose.Schema({
+const otpSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
+    lowercase: true
   },
   otp: {
     type: String,
-    required: true,
+    required: true
   },
-  createdAt: {
+  type: {
+    type: String,
+    enum: ['signup', 'reset', 'login'],
+    required: true
+  },
+  expiry: {
     type: Date,
-    default: Date.now,
-    expires: 900, // Document will be automatically deleted after 15 minutes (900 seconds)
+    required: true,
+    default: () => new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
   },
+  attempts: {
+    type: Number,
+    default: 0
+  },
+  verified: {
+    type: Boolean,
+    default: false
+  }
 });
 
-export default mongoose.models.OTP || mongoose.model('OTP', OTPSchema);
+// Add index for automatic cleanup
+otpSchema.index({ expiry: 1 }, { expireAfterSeconds: 0 });
+
+const OTP = mongoose.models.OTP || mongoose.model('OTP', otpSchema);
+
+export default OTP;

@@ -23,7 +23,13 @@ function DashboardContent({ children }) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
 
-  // Handle screen resize
+  useEffect(() => {
+    // Check for invalid session and redirect
+    if (status === 'authenticated' && (!session || !session.user)) {
+      signOut({ redirect: true, callbackUrl: '/?showLogin=true' });
+    }
+  }, [session, status]);
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobileView(window.innerWidth < 1024);
@@ -41,14 +47,15 @@ function DashboardContent({ children }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // If not authenticated, show loading
+  // Show loading state while checking session
   if (status === "loading") {
     return <LoadingSpinner />;
   }
 
-  // If not authenticated, redirect will happen automatically through middleware
-  if (status === "unauthenticated") {
-    return null;
+  // Redirect if not authenticated
+  if (status === "unauthenticated" || !session?.user) {
+    window.location.href = '/?showLogin=true';
+    return <LoadingSpinner />;
   }
 
   const menuItems = [

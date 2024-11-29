@@ -45,13 +45,7 @@ export default function Settings() {
         const res = await fetch('/api/auth/sessions');
         const data = await res.json();
         if (data.sessions) {
-          // Sort sessions to show current session first
-          const sortedSessions = data.sessions.sort((a, b) => {
-            if (a.isCurrentSession) return -1;
-            if (b.isCurrentSession) return 1;
-            return new Date(b.lastActivity) - new Date(a.lastActivity);
-          });
-          setSessions(sortedSessions);
+          setSessions(data.sessions);
         }
       } catch (error) {
         toast.error('Failed to fetch sessions');
@@ -88,6 +82,12 @@ export default function Settings() {
       return;
     }
 
+    if (!formData.currentPassword || !formData.newPassword) {
+      addLog('Current password and new password are required', 'error');
+      toast.error('All fields are required');
+      return;
+    }
+
     try {
       setLoading(true);
       addLog('Initiating password change...', 'info');
@@ -109,14 +109,19 @@ export default function Settings() {
         throw new Error(data.error || 'Failed to change password');
       }
 
-      addLog('✅ Password changed successfully!', 'success');
-      toast.success('Password changed successfully');
-      
-      setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
+      if (data.success) {
+        addLog('✅ Password changed successfully!', 'success');
+        toast.success(data.message || 'Password changed successfully');
+        
+        // Clear form
+        setFormData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+      } else {
+        throw new Error(data.error || 'Failed to change password');
+      }
 
     } catch (error) {
       addLog(`❌ Error: ${error.message}`, 'error');
@@ -127,58 +132,46 @@ export default function Settings() {
     }
   };
 
-  const handleRevokeSession = async (sessionId) => {
+  const handleLogout = async (sessionId) => {
     try {
       setRevoking(true);
-      const res = await fetch('/api/auth/sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sessionIds: [sessionId],
-        }),
+      const res = await fetch(`/api/auth/sessions?sessionId=${sessionId}`, {
+        method: 'DELETE'
       });
 
       if (!res.ok) {
-        throw new Error('Failed to revoke session');
+        throw new Error('Failed to end session');
       }
 
       setSessions(prev => prev.filter(s => s._id !== sessionId));
-      toast.success('Session ended successfully');
-      addLog('Session ended successfully', 'success');
+      toast.success('Device logged out successfully');
+      addLog('Device logged out successfully', 'success');
     } catch (error) {
-      toast.error('Failed to end session');
-      addLog('Failed to end session', 'error');
+      toast.error(error.message);
+      addLog(`Failed to end session: ${error.message}`, 'error');
     } finally {
       setRevoking(false);
     }
   };
 
-  const handleRevokeAllSessions = async () => {
+  const handleLogoutAll = async () => {
     try {
       setRevoking(true);
-      const res = await fetch('/api/auth/sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          revokeAll: true,
-        }),
+      const res = await fetch('/api/auth/sessions?all=true', {
+        method: 'DELETE'
       });
 
       if (!res.ok) {
-        throw new Error('Failed to revoke all sessions');
+        throw new Error('Failed to end all sessions');
       }
 
       // Keep only the current session
       setSessions(prev => prev.filter(s => s.isCurrentSession));
-      toast.success('All other sessions ended successfully');
-      addLog('All other sessions ended successfully', 'success');
+      toast.success('All other devices logged out successfully');
+      addLog('All other devices logged out successfully', 'success');
     } catch (error) {
-      toast.error('Failed to end all sessions');
-      addLog('Failed to end all sessions', 'error');
+      toast.error(error.message);
+      addLog(`Failed to end all sessions: ${error.message}`, 'error');
     } finally {
       setRevoking(false);
     }
@@ -247,7 +240,7 @@ export default function Settings() {
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Active Sessions</h2>
           {sessions.length > 1 && (
             <button
-              onClick={handleRevokeAllSessions}
+              onClick={handleLogoutAll}
               disabled={revoking}
               className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300
                        transition-colors duration-200 flex items-center space-x-2"
@@ -271,7 +264,7 @@ export default function Settings() {
               <ActiveSessionCard
                 key={session._id}
                 session={session}
-                onRevoke={handleRevokeSession}
+                onRevoke={handleLogout}
                 isCurrentSession={session.isCurrentSession}
               />
             ))

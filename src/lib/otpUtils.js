@@ -27,19 +27,45 @@ transporter.verify(function (error, success) {
   }
 });
 
+// Store OTP in MongoDB
+export async function storeOTP(email, otp, type = 'signup') {
+  try {
+    await connectDB();
+    
+    // Delete any existing OTP for this email and type
+    await OTP.deleteMany({ 
+      email: email.toLowerCase(),
+      type 
+    });
+    
+    // Create new OTP document with expiry
+    const otpDoc = await OTP.create({
+      email: email.toLowerCase(),
+      otp,
+      type,
+      expiry: Date.now() + 15 * 60 * 1000, // 15 minutes
+      attempts: 0,
+      verified: false
+    });
+    
+    logger.info(`OTP stored successfully. Email: ${email}, Type: ${type}`);
+    return true;
+  } catch (error) {
+    logger.error(`Error storing OTP: ${error.message}`);
+    throw error; // Propagate error to handle it in the signup flow
+  }
+}
+
 // Generate a random 6-digit OTP and store it
-export async function generateOTP(email) {
+export async function generateOTP(email, type = 'signup') {
   try {
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     
     // Store OTP
-    const stored = await storeOTP(email, otp);
-    if (!stored) {
-      throw new Error('Failed to store OTP');
-    }
+    await storeOTP(email, otp, type);
     
-    logger.info(`Generated and stored OTP for email: ${email}`);
+    logger.info(`Generated and stored OTP for email: ${email}, Type: ${type}`);
     return otp;
   } catch (error) {
     logger.error(`Error generating OTP: ${error.message}`);
@@ -47,44 +73,22 @@ export async function generateOTP(email) {
   }
 }
 
-// Store OTP in MongoDB
-export async function storeOTP(email, otp) {
-  try {
-    await connectDB();
-    
-    // Delete any existing OTP for this email
-    await OTP.deleteMany({ email: email.toLowerCase() });
-    
-    // Create new OTP document with expiry
-    const otpDoc = await OTP.create({
-      email: email.toLowerCase(),
-      otp,
-      expiry: Date.now() + 15 * 60 * 1000, // 15 minutes
-    });
-    
-    logger.info(`OTP stored successfully. Email: ${email}, OTP: ${otp}`);
-    return true;
-  } catch (error) {
-    logger.error(`Error storing OTP: ${error.message}`);
-    return false;
-  }
-}
-
 // Verify OTP from MongoDB
-export async function verifyOTP(email, userOTP) {
+export async function verifyOTP(email, userOTP, type = 'signup') {
   try {
     await connectDB();
     
-    logger.info(`Verifying OTP for email: ${email}, Provided OTP: ${userOTP}`);
+    logger.info(`Verifying OTP for email: ${email}, Type: ${type}`);
     
-    const otpDoc = await OTP.findOne({ email: email.toLowerCase() });
+    const otpDoc = await OTP.findOne({ 
+      email: email.toLowerCase(),
+      type
+    });
     
     if (!otpDoc) {
       logger.warn(`No OTP found for email: ${email}`);
       return { valid: false, message: 'No OTP found for this email' };
     }
-    
-    logger.info(`Found OTP document: ${JSON.stringify(otpDoc)}`);
     
     if (Date.now() > otpDoc.expiry) {
       await OTP.deleteOne({ _id: otpDoc._id });
@@ -93,6 +97,8 @@ export async function verifyOTP(email, userOTP) {
     }
     
     if (otpDoc.otp !== userOTP) {
+      // Increment attempts
+      await OTP.findByIdAndUpdate(otpDoc._id, { $inc: { attempts: 1 } });
       logger.warn(`Invalid OTP attempt for ${email}. Expected: ${otpDoc.otp}, Received: ${userOTP}`);
       return { valid: false, message: 'Invalid OTP' };
     }
@@ -103,15 +109,26 @@ export async function verifyOTP(email, userOTP) {
     return { valid: true, message: 'OTP verified successfully' };
   } catch (error) {
     logger.error(`Error verifying OTP: ${error.message}`);
-    return { valid: false, message: 'Error verifying OTP' };
+    throw error;
   }
 }
 
 // Send OTP via email
 export async function sendOTPEmail(email, otp) {
   try {
+    // Check for required environment variables
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      logger.error('Missing email configuration');
+      throw new Error('Email service not configured');
+    }
+
     // Verify connection configuration
-    await transporter.verify();
+    try {
+      await transporter.verify();
+    } catch (error) {
+      logger.error(`SMTP verification failed: ${error.message}`);
+      throw new Error('Failed to connect to email service');
+    }
     
     const info = await transporter.sendMail({
       from: `"Pak OTP" <${process.env.GMAIL_USER}>`,
@@ -134,11 +151,16 @@ export async function sendOTPEmail(email, otp) {
       `
     });
 
+    if (!info || !info.messageId) {
+      logger.error('Email sent but no message ID received');
+      throw new Error('Failed to send email');
+    }
+
     logger.info(`Email sent successfully to ${email}`);
     logger.info(`Message ID: ${info.messageId}`);
     return true;
   } catch (error) {
     logger.error(`Error sending email: ${error.message}`);
-    return false;
+    throw error;
   }
 }

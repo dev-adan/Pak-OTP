@@ -1,68 +1,91 @@
 import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
-import bcrypt from 'bcryptjs';
-import { verifyOTP } from '@/lib/otpUtils';
+import { generateOTP, verifyOTP, sendOTPEmail } from '@/lib/otpUtils';
+import { logger } from '@/lib/logger';
 
 export async function POST(req) {
   try {
-    const { email, otp, newPassword } = await req.json();
-
-    // Validate input
-    if (!email || !otp || !newPassword) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Validate password strength
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character' },
-        { status: 400 }
-      );
-    }
+    const { email, otp, newPassword, step } = await req.json();
 
     await connectDB();
 
-    // Verify OTP
-    const isValidOTP = await verifyOTP(email.toLowerCase(), otp);
-    if (!isValidOTP) {
-      return NextResponse.json(
-        { error: 'Invalid or expired OTP' },
-        { status: 400 }
-      );
+    // Step 1: Initiate password reset
+    if (step === 'initiate') {
+      if (!email) {
+        return NextResponse.json(
+          { error: 'Email is required' },
+          { status: 400 }
+        );
+      }
+
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return NextResponse.json(
+          { error: 'No account found with this email' },
+          { status: 404 }
+        );
+      }
+
+      // Generate and send OTP
+      const otp = await generateOTP(email);
+      await sendOTPEmail(email, otp);
+
+      logger.info(`Password reset initiated for user: ${email}`);
+
+      return NextResponse.json({
+        message: 'Password reset OTP sent to your email'
+      });
     }
 
-    // Find user and update password
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
+    // Step 2: Verify OTP and set new password
+    if (step === 'reset') {
+      if (!email || !otp || !newPassword) {
+        return NextResponse.json(
+          { error: 'All fields are required' },
+          { status: 400 }
+        );
+      }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
-    // Update user's password
-    await User.updateOne(
-      { email: email.toLowerCase() },
-      { $set: { password: hashedPassword } }
-    );
+      // Verify OTP
+      const verificationResult = await verifyOTP(email, otp);
+      if (!verificationResult.valid) {
+        return NextResponse.json(
+          { error: verificationResult.message },
+          { status: 400 }
+        );
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+      // Update password
+      await User.findOneAndUpdate(
+        { email: email.toLowerCase() },
+        { 
+          hashedPassword,
+          resetPasswordToken: null,
+          resetPasswordExpires: null
+        }
+      );
+
+      logger.info(`Password reset successful for user: ${email}`);
+
+      return NextResponse.json({
+        message: 'Password reset successful'
+      });
+    }
 
     return NextResponse.json(
-      { message: 'Password reset successful' },
-      { status: 200 }
+      { error: 'Invalid step' },
+      { status: 400 }
     );
 
   } catch (error) {
-    console.error('Password reset error:', error);
+    logger.error(`Password reset error: ${error.message}`);
     return NextResponse.json(
-      { error: 'An error occurred while resetting password' },
+      { error: 'Failed to process password reset' },
       { status: 500 }
     );
   }

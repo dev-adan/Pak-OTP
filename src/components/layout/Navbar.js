@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '../shared/Logo';
 import { useSession, signOut } from 'next-auth/react';
+import toast from 'react-hot-toast'; // Import toast
 
 export default function Navbar({ onLoginClick }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -39,6 +40,10 @@ export default function Navbar({ onLoginClick }) {
       // First, cancel any pending requests or cleanup
       await Promise.resolve(); // Allow any pending state updates to complete
       
+      // Clear any local storage or cookies we may have set
+      localStorage.removeItem('user-settings');
+      sessionStorage.clear();
+      
       // Then sign out with a redirect
       await signOut({ 
         redirect: true,
@@ -46,6 +51,7 @@ export default function Navbar({ onLoginClick }) {
       });
     } catch (error) {
       console.error('Logout error:', error);
+      toast.error('Failed to logout. Please try again.');
     }
   };
 

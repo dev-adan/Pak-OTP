@@ -217,26 +217,35 @@ export default function LoginModal({ isOpen, onClose }) {
         }
       } else {
         // Handle Sign Up
-        const res = await fetch('/api/auth/send-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            password: formData.password
-          }),
-        });
+        setLoading(true);
+        try {
+          const res = await fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: formData.name,
+              email: formData.email,
+              password: formData.password
+            }),
+          });
 
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data.error || 'Registration failed');
-          toast.error(data.error || 'Registration failed');
-          return;
+          if (!res.ok) {
+            const data = await res.json();
+            setError(data.error || 'Registration failed');
+            toast.error(data.error || 'Registration failed');
+            setLoading(false);
+            return;
+          }
+
+          toast.success('OTP sent to your email!');
+          setSlideDirection(1);
+          setShowOtpScreen(true);
+        } catch (error) {
+          setError(error.message || 'Registration failed');
+          toast.error(error.message || 'Registration failed');
+        } finally {
+          setLoading(false);
         }
-
-        toast.success('OTP sent to your email!');
-        setSlideDirection(1);
-        setShowOtpScreen(true);
       }
     } catch (error) {
       setError(error.message);
@@ -329,14 +338,12 @@ export default function LoginModal({ isOpen, onClose }) {
       setLoading(true);
       setError(''); // Clear previous errors
 
-      // First verify OTP and create account
-      const res = await fetch('/api/auth/verify-otp', {
+      // First verify OTP
+      const res = await fetch('/api/auth/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: formData.email.toLowerCase(), // Ensure email is lowercase
-          name: formData.name,
-          password: formData.password,
+          email: formData.email.toLowerCase(),
           otp: otp
         }),
       });
@@ -348,7 +355,7 @@ export default function LoginModal({ isOpen, onClose }) {
         return;
       }
 
-      toast.success('Account created successfully!');
+      toast.success('Email verified successfully!');
       
       // Get the callback URL from URL params or use default
       const params = new URLSearchParams(window.location.search);
@@ -356,10 +363,15 @@ export default function LoginModal({ isOpen, onClose }) {
 
       // Log in the user after successful verification
       const result = await signIn('credentials', {
-        email: formData.email.toLowerCase(), // Ensure email is lowercase
-        password: formData.password, // Use the original password
+        email: formData.email.toLowerCase(),
+        password: formData.password,
         redirect: false,
-        callbackUrl
+        callbackUrl,
+        userAgent: window.navigator.userAgent,
+        ipAddress: await fetch('https://api.ipify.org?format=json')
+          .then(res => res.json())
+          .then(data => data.ip)
+          .catch(() => 'unknown')
       });
 
       if (result?.error) {
@@ -370,11 +382,10 @@ export default function LoginModal({ isOpen, onClose }) {
 
       // Success - close modal and redirect
       onClose();
-      if (result.url) {
-        window.location.href = result.url;
-      } else {
-        window.location.href = callbackUrl;
-      }
+      
+      // Add a small delay to ensure session is created
+      await new Promise(resolve => setTimeout(resolve, 500));
+      router.push(result.url || callbackUrl);
     } catch (error) {
       setError(error.message);
       toast.error(error.message);

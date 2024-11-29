@@ -1,160 +1,165 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import GoogleProvider from 'next-auth/providers/google';
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import clientPromise from '@/lib/mongodb-adapter';
-import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import Session from '@/models/Session';
+import bcrypt from 'bcryptjs';
 import { logger } from '@/lib/logger';
+import { UAParser } from 'ua-parser-js';
 import { headers } from 'next/headers';
 
-const handler = NextAuth({
-  adapter: MongoDBAdapter(clientPromise),
+export const authOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
     CredentialsProvider({
-      name: 'Credentials',
+      name: 'credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'text' },
+        password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         try {
           await connectDB();
-          logger.info(`Attempting login for email: ${credentials.email}`);
+
+          const user = await User.findOne({ email: credentials.email.toLowerCase() });
           
-          const user = await User.findOne({ email: credentials.email.toLowerCase() }).select('+password');
           if (!user) {
-            logger.warn(`Login failed: User not found for email ${credentials.email}`);
-            throw new Error('Invalid email or password');
+            logger.warn(`Login attempt failed: User not found - ${credentials.email}`);
+            return null;
           }
 
-          const isValid = await bcrypt.compare(credentials.password, user.password);
+          const isValid = await bcrypt.compare(credentials.password, user.hashedPassword);
+          
           if (!isValid) {
-            logger.warn(`Login failed: Invalid password for email ${credentials.email}`);
-            throw new Error('Invalid email or password');
+            logger.warn(`Login attempt failed: Invalid password - ${credentials.email}`);
+            return null;
           }
 
-          logger.info(`Login successful for user: ${user.email}`);
+          // Update last login
+          await User.findByIdAndUpdate(user._id, {
+            lastLogin: new Date()
+          });
+
+          logger.info(`User logged in successfully: ${credentials.email}`);
+          
           return {
             id: user._id.toString(),
             email: user.email,
             name: user.name,
-            role: user.role,
-            image: user.image
+            role: user.role
           };
         } catch (error) {
-          logger.error(`Authentication error: ${error.message}`);
-          throw error;
+          logger.error(`Authorization error: ${error.message}`);
+          return null;
         }
-      },
-    }),
+      }
+    })
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
         token.role = user.role;
-        token.sessionId = token.jti; // Use JWT ID as session ID
       }
       return token;
     },
     async session({ session, token }) {
       try {
-        if (session?.user) {
-          session.user.id = token.id;
-          session.user.role = token.role;
-          session.sessionId = token.sessionId;
+        await connectDB();
+        
+        // Check if session is still active in database
+        const dbSession = await Session.findOne({
+          userId: token.id,
+          isActive: true
+        }).sort({ lastAccessed: -1 });
 
-          // Get request headers
-          const headersList = await headers();
-          const userAgent = headersList.get('user-agent') || '';
-          const ip = headersList.get('x-forwarded-for')?.split(',')[0] || 
-                    headersList.get('x-real-ip') || 
-                    'unknown';
-
-          // Parse user agent
-          const browser = userAgent.match(/(chrome|safari|firefox|edge|opera|ie)\/?\s*(\d+)/i)?.[1] || 'unknown';
-          const os = userAgent.match(/windows|mac|linux|android|ios/i)?.[0] || 'unknown';
-          const device = userAgent.match(/mobile|tablet/i) ? 'mobile' : 'desktop';
-
-          // Create or update session document
-          await connectDB();
-          await Session.findOneAndUpdate(
-            { 
-              sessionToken: token.sessionId,
-              userId: session.user.id
-            },
-            { 
-              $set: { 
-                lastActivity: new Date(),
-                isValid: true,
-                deviceInfo: {
-                  userAgent,
-                  browser,
-                  os,
-                  device,
-                  ip
-                }
-              }
-            },
-            { 
-              upsert: true,
-              new: true
-            }
-          );
-
-          logger.info(`Session updated for user: ${session.user.email}`);
+        if (!dbSession) {
+          throw new Error('Session not found or inactive');
         }
-        return session;
+
+        const updatedSession = {
+          ...session,
+          user: {
+            ...session.user,
+            id: token.id,
+            email: token.email,
+            name: token.name,
+            role: token.role
+          },
+          sessionId: dbSession._id.toString()
+        };
+        
+        // Update last accessed time
+        await Session.findByIdAndUpdate(dbSession._id, {
+          lastAccessed: new Date()
+        });
+
+        return updatedSession;
       } catch (error) {
-        logger.error(`Session callback error: ${error.message}`);
-        return session;
+        logger.error(`Session validation error: ${error.message}`);
+        return {
+          expires: new Date(0).toISOString(),
+          user: null
+        };
       }
     },
-    async signIn({ user, account, profile }) {
+    async signIn({ user }) {
       try {
-        if (account?.provider === 'google') {
-          await connectDB();
-          const existingUser = await User.findOne({ email: profile.email });
+        await connectDB();
+        
+        // Get user agent info from the request headers
+        const headersList = headers();
+        const userAgent = headersList.get('user-agent') || '';
+        
+        let deviceInfo = {
+          browser: 'Unknown',
+          os: 'Unknown',
+          device: 'Desktop'
+        };
+
+        try {
+          const parser = new UAParser(userAgent);
+          const result = parser.getResult();
           
-          if (!existingUser) {
-            const newUser = await User.create({
-              email: profile.email,
-              name: profile.name,
-              image: profile.picture,
-              emailVerified: profile.email_verified,
-              role: 'user'
-            });
-            user.id = newUser._id.toString();
-            user.role = 'user';
-          } else {
-            user.id = existingUser._id.toString();
-            user.role = existingUser.role;
-          }
+          deviceInfo = {
+            browser: `${result.browser.name || 'Unknown'} ${result.browser.version || ''}`.trim(),
+            os: `${result.os.name || 'Unknown'} ${result.os.version || ''}`.trim(),
+            device: result.device.type || (
+              /mobile/i.test(userAgent) ? 'Mobile' :
+              /tablet/i.test(userAgent) ? 'Tablet' : 'Desktop'
+            )
+          };
+        } catch (parseError) {
+          logger.warn(`Error parsing user agent: ${parseError.message}`);
         }
+
+        // Create new session
+        await Session.create({
+          userId: user.id,
+          deviceInfo,
+          ipAddress: headersList.get('x-forwarded-for') || 'Unknown',
+          lastAccessed: new Date(),
+          isActive: true
+        });
+
+        logger.info(`New session created for user: ${user.email}`);
         return true;
       } catch (error) {
-        logger.error(`Sign in callback error: ${error.message}`);
+        logger.error(`Error in signIn callback: ${error.message}`);
         return false;
       }
     }
   },
   pages: {
-    signIn: '/',
-    error: '/',
+    signIn: '/?showLogin=true',
   },
   session: {
-    strategy: "jwt",
+    strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
