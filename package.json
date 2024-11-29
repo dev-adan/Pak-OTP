@@ -20,6 +20,7 @@
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.4.6",
+    "date-fns": "^4.1.0",
     "framer-motion": "^11.11.17",
     "mongodb": "^6.11.0",
     "mongoose": "^8.8.3",

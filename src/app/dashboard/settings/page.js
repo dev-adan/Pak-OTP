@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
+import ActiveSessionCard from '../../../components/sessions/ActiveSessionCard';
 
 export default function Settings() {
   const { data: session, status } = useSession();
@@ -17,6 +18,7 @@ export default function Settings() {
     confirmPassword: '',
   });
   const [sessions, setSessions] = useState([]);
+  const [revoking, setRevoking] = useState(false);
 
   // Password validation states
   const passwordValidation = useMemo(() => {
@@ -39,9 +41,22 @@ export default function Settings() {
 
   useEffect(() => {
     const fetchSessions = async () => {
-      const res = await fetch('/api/auth/sessions');
-      const data = await res.json();
-      setSessions(data.sessions);
+      try {
+        const res = await fetch('/api/auth/sessions');
+        const data = await res.json();
+        if (data.sessions) {
+          // Sort sessions to show current session first
+          const sortedSessions = data.sessions.sort((a, b) => {
+            if (a.isCurrentSession) return -1;
+            if (b.isCurrentSession) return 1;
+            return new Date(b.lastActivity) - new Date(a.lastActivity);
+          });
+          setSessions(sortedSessions);
+        }
+      } catch (error) {
+        toast.error('Failed to fetch sessions');
+        addLog('Failed to fetch active sessions', 'error');
+      }
     };
     fetchSessions();
   }, []);
@@ -114,35 +129,58 @@ export default function Settings() {
 
   const handleRevokeSession = async (sessionId) => {
     try {
-      const res = await fetch(`/api/auth/revoke-session/${sessionId}`, {
+      setRevoking(true);
+      const res = await fetch('/api/auth/sessions', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionIds: [sessionId],
+        }),
       });
 
       if (!res.ok) {
         throw new Error('Failed to revoke session');
       }
 
-      setSessions(prev => prev.filter(session => session._id !== sessionId));
-      toast.success('Session revoked successfully');
+      setSessions(prev => prev.filter(s => s._id !== sessionId));
+      toast.success('Session ended successfully');
+      addLog('Session ended successfully', 'success');
     } catch (error) {
-      toast.error(error.message);
+      toast.error('Failed to end session');
+      addLog('Failed to end session', 'error');
+    } finally {
+      setRevoking(false);
     }
   };
 
   const handleRevokeAllSessions = async () => {
     try {
-      const res = await fetch('/api/auth/revoke-all-sessions', {
+      setRevoking(true);
+      const res = await fetch('/api/auth/sessions', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          revokeAll: true,
+        }),
       });
 
       if (!res.ok) {
         throw new Error('Failed to revoke all sessions');
       }
 
-      setSessions([]);
-      toast.success('All sessions revoked successfully');
+      // Keep only the current session
+      setSessions(prev => prev.filter(s => s.isCurrentSession));
+      toast.success('All other sessions ended successfully');
+      addLog('All other sessions ended successfully', 'success');
     } catch (error) {
-      toast.error(error.message);
+      toast.error('Failed to end all sessions');
+      addLog('Failed to end all sessions', 'error');
+    } finally {
+      setRevoking(false);
     }
   };
 
@@ -203,49 +241,43 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Active Sessions */}
-      <section className="mb-8">
-        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-1 rounded-2xl">
-          <div className="bg-white p-6 rounded-2xl">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Active Sessions</h2>
-            <div className="space-y-4">
-              {sessions.map((session) => (
-                <div key={session._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                      <Icon 
-                        icon={session.deviceInfo.device === 'mobile' ? 'solar:smartphone-bold-duotone' : 'solar:monitor-bold-duotone'} 
-                        className="w-6 h-6 text-indigo-600"
-                      />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{session.deviceInfo.browser} on {session.deviceInfo.os}</p>
-                      <p className="text-sm text-gray-500">
-                        Last active: {new Date(session.lastActivity).toLocaleDateString()}
-                      </p>
-                      <p className="text-xs text-gray-400">{session.deviceInfo.ip}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleRevokeSession(session._id)}
-                    className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    Revoke
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={handleRevokeAllSessions}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-              >
-                Revoke All Sessions
-              </button>
-            </div>
-          </div>
+      {/* Active Sessions Section */}
+      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-lg p-6 mb-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Active Sessions</h2>
+          {sessions.length > 1 && (
+            <button
+              onClick={handleRevokeAllSessions}
+              disabled={revoking}
+              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300
+                       transition-colors duration-200 flex items-center space-x-2"
+            >
+              <Icon icon="material-symbols:logout" className="w-5 h-5" />
+              <span>End All Other Sessions</span>
+            </button>
+          )}
         </div>
-      </section>
+
+        <div className="space-y-4">
+          {sessions.length === 0 ? (
+            <div className="text-center py-8">
+              <Icon icon="material-symbols:devices" className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-500 dark:text-gray-400">
+                No active sessions found
+              </p>
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <ActiveSessionCard
+                key={session._id}
+                session={session}
+                onRevoke={handleRevokeSession}
+                isCurrentSession={session.isCurrentSession}
+              />
+            ))
+          )}
+        </div>
+      </div>
 
       <div className="space-y-6">
         {/* Password Section */}

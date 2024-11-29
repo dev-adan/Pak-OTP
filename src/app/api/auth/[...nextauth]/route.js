@@ -1,13 +1,14 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
-import { MongoDBAdapter } from "@auth/mongodb-adapter"
-import clientPromise from '@/lib/mongodb-adapter'
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import clientPromise from '@/lib/mongodb-adapter';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import Session from '@/models/Session';
 import { logger } from '@/lib/logger';
+import { headers } from 'next/headers';
 
 const handler = NextAuth({
   adapter: MongoDBAdapter(clientPromise),
@@ -33,7 +34,7 @@ const handler = NextAuth({
             throw new Error('Invalid email or password');
           }
 
-          const isValid = await user.comparePassword(credentials.password);
+          const isValid = await bcrypt.compare(credentials.password, user.password);
           if (!isValid) {
             logger.warn(`Login failed: Invalid password for email ${credentials.email}`);
             throw new Error('Invalid email or password');
@@ -51,36 +52,64 @@ const handler = NextAuth({
           logger.error(`Authentication error: ${error.message}`);
           throw error;
         }
-      }
-    })
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.sessionId = token.jti; // Use JWT ID as session ID
       }
       return token;
     },
-    async session({ session, token, user }) {
+    async session({ session, token }) {
       try {
         if (session?.user) {
-          session.user.id = token?.id || user?.id;
-          session.user.role = token?.role || user?.role;
-          
-          logger.info(`Session updated for user: ${session.user.email}`);
-          
-          // Update session activity
+          session.user.id = token.id;
+          session.user.role = token.role;
+          session.sessionId = token.sessionId;
+
+          // Get request headers
+          const headersList = await headers();
+          const userAgent = headersList.get('user-agent') || '';
+          const ip = headersList.get('x-forwarded-for')?.split(',')[0] || 
+                    headersList.get('x-real-ip') || 
+                    'unknown';
+
+          // Parse user agent
+          const browser = userAgent.match(/(chrome|safari|firefox|edge|opera|ie)\/?\s*(\d+)/i)?.[1] || 'unknown';
+          const os = userAgent.match(/windows|mac|linux|android|ios/i)?.[0] || 'unknown';
+          const device = userAgent.match(/mobile|tablet/i) ? 'mobile' : 'desktop';
+
+          // Create or update session document
+          await connectDB();
           await Session.findOneAndUpdate(
-            { userId: session.user.id },
+            { 
+              sessionToken: token.sessionId,
+              userId: session.user.id
+            },
             { 
               $set: { 
                 lastActivity: new Date(),
-                isValid: true
+                isValid: true,
+                deviceInfo: {
+                  userAgent,
+                  browser,
+                  os,
+                  device,
+                  ip
+                }
               }
             },
-            { upsert: true }
+            { 
+              upsert: true,
+              new: true
+            }
           );
+
+          logger.info(`Session updated for user: ${session.user.email}`);
         }
         return session;
       } catch (error) {
@@ -90,47 +119,42 @@ const handler = NextAuth({
     },
     async signIn({ user, account, profile }) {
       try {
-        await connectDB();
-        logger.info(`Sign in attempt for user: ${user.email}`);
-        
         if (account?.provider === 'google') {
-          const existingUser = await User.findOne({ email: user.email.toLowerCase() });
+          await connectDB();
+          const existingUser = await User.findOne({ email: profile.email });
           
           if (!existingUser) {
-            await User.create({
-              name: user.name,
-              email: user.email.toLowerCase(),
-              role: 'user',
-              image: user.image,
-              password: await bcrypt.hash(Math.random().toString(36), 12),
-              emailVerified: new Date()
+            const newUser = await User.create({
+              email: profile.email,
+              name: profile.name,
+              image: profile.picture,
+              emailVerified: profile.email_verified,
+              role: 'user'
             });
-            logger.info(`New user created via Google OAuth: ${user.email}`);
+            user.id = newUser._id.toString();
+            user.role = 'user';
+          } else {
+            user.id = existingUser._id.toString();
+            user.role = existingUser.role;
           }
         }
-
         return true;
       } catch (error) {
-        logger.error(`Sign in error: ${error.message}`);
+        logger.error(`Sign in callback error: ${error.message}`);
         return false;
       }
     }
   },
+  pages: {
+    signIn: '/',
+    error: '/',
+  },
   session: {
-    strategy: "jwt", // Changed to JWT for better compatibility
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  pages: {
-    signIn: '/?showLogin=true',
-    error: '/auth/error',
-  },
-  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
-  logger: {
-    error: (code, ...message) => logger.error(code, { message }),
-    warn: (code, ...message) => logger.warn(code, { message }),
-    debug: (code, ...message) => logger.debug(code, { message }),
-  }
+  debug: process.env.NODE_ENV === 'development',
 });
 
 export { handler as GET, handler as POST };
