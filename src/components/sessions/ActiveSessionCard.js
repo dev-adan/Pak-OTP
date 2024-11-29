@@ -24,17 +24,47 @@ export default function ActiveSessionCard({ session, onLogout }) {
   };
 
   const iconVariants = {
-    initial: { rotate: 0 },
-    hover: { rotate: 360, transition: { duration: 0.5 } }
+    initial: { rotate: 0, scale: 1 },
+    hover: { 
+      rotate: 360, 
+      scale: 1.1,
+      transition: { duration: 0.5 } 
+    }
+  };
+
+  const buttonVariants = {
+    initial: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+    hover: { 
+      backgroundColor: 'rgba(239, 68, 68, 0.2)',
+      transition: { duration: 0.2 }
+    }
   };
 
   // Get appropriate icon and color based on device type
   const getDeviceIcon = () => {
-    const type = deviceInfo.device.toLowerCase();
-    if (type === 'mobile') return 'material-symbols:phone-android';
-    if (type === 'tablet') return 'material-symbols:tablet';
+    const type = (deviceInfo?.device || '').toLowerCase();
+    if (type.includes('mobile') || type.includes('phone')) return 'material-symbols:phone-android';
+    if (type.includes('tablet')) return 'material-symbols:tablet';
     return 'material-symbols:computer';
   };
+
+  // Format date to relative time with tooltip
+  const formatDate = (date) => {
+    const formattedDate = new Date(date).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return {
+      relative: formatDistanceToNow(new Date(date), { addSuffix: true }),
+      full: formattedDate
+    };
+  };
+
+  const lastAccessedTime = formatDate(session.lastAccessed);
+  const createdTime = formatDate(session.createdAt);
 
   return (
     <motion.div
@@ -42,8 +72,8 @@ export default function ActiveSessionCard({ session, onLogout }) {
       initial="initial"
       animate="animate"
       whileHover="hover"
-      className="relative w-[280px] h-[200px] bg-gradient-to-br from-gray-800 to-gray-900 
-                 rounded-2xl overflow-hidden"
+      className="relative w-full sm:w-[340px] h-auto bg-gradient-to-br from-gray-800 to-gray-900 
+                 rounded-2xl overflow-hidden p-5"
     >
       {/* Animated background glow */}
       <motion.div
@@ -53,15 +83,9 @@ export default function ActiveSessionCard({ session, onLogout }) {
         className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10"
       />
 
-      {/* Decorative circuit lines */}
-      <div className="absolute inset-0">
-        <div className="absolute top-0 right-0 w-32 h-32 border-t border-r border-gray-700/50" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 border-b border-l border-gray-700/50" />
-      </div>
-
       {/* Content container */}
-      <div className="relative h-full p-4 flex flex-col justify-between">
-        {/* Top section with device icon */}
+      <div className="relative space-y-4">
+        {/* Header with device icon and status */}
         <div className="flex items-start justify-between">
           <motion.div
             variants={iconVariants}
@@ -90,48 +114,64 @@ export default function ActiveSessionCard({ session, onLogout }) {
           )}
         </div>
 
-        {/* Middle section with device info */}
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-gray-100">
-            {deviceInfo.browser}
-          </h3>
-          <p className="text-sm text-gray-400">
-            {deviceInfo.os}
-          </p>
-        </div>
-
-        {/* Bottom section with time and actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-            <Icon icon="mdi:clock-outline" width={14} height={14} />
-            <span>
-              {formatDistanceToNow(new Date(session.lastAccessed))}
-            </span>
-          </div>
-
-          {!isCurrentSession && (
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onLogout(session._id)}
-              className="p-2 rounded-lg text-red-400 hover:text-red-300 
-                         hover:bg-red-500/20 transition-colors duration-200"
-              title="Logout this device"
-            >
-              <Icon icon="material-symbols:logout" width={18} height={18} />
-            </motion.button>
-          )}
-        </div>
-
-        {/* IP Address tooltip */}
-        {session.ipAddress && (
-          <div className="absolute bottom-0 left-0 right-0 p-2 text-xs text-gray-500
-                          opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <div className="flex items-center justify-center gap-1">
-              <Icon icon="mdi:ip-network-outline" width={12} height={12} />
-              <span>{session.ipAddress}</span>
+        {/* Device Info Section */}
+        <div className="space-y-4">
+          {/* Browser and OS */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-100 mb-1">
+              {deviceInfo?.browser || 'Unknown Browser'}
+            </h3>
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <Icon icon="ph:desktop-bold" className="w-4 h-4" />
+              <span>{deviceInfo?.os || 'Unknown OS'}</span>
             </div>
           </div>
+
+          {/* IP Address */}
+          <div className="flex items-center gap-2 text-sm text-gray-400 bg-gray-800/50 px-3 py-2 rounded-lg">
+            <Icon icon="ph:globe-bold" className="w-4 h-4 text-indigo-400" />
+            <span>{session.ipAddress || 'Unknown IP'}</span>
+          </div>
+
+          {/* Time Information */}
+          <div className="space-y-2">
+            {/* Last Accessed */}
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Icon icon="ph:clock-bold" className="w-3.5 h-3.5" />
+              <span title={lastAccessedTime.full}>
+                Last active {lastAccessedTime.relative}
+              </span>
+            </div>
+            {/* Created At */}
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Icon icon="ph:calendar-bold" className="w-3.5 h-3.5" />
+              <span title={createdTime.full}>
+                Created {createdTime.relative}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        {!isCurrentSession && (
+          <motion.button
+            onClick={() => onLogout(session.id)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="group p-2 rounded-xl transition-colors duration-200 
+                     hover:bg-red-500/20 focus:outline-none focus:ring-2 
+                     focus:ring-red-500/40 focus:ring-offset-1 focus:ring-offset-gray-800"
+          >
+            <motion.div 
+              whileHover={{ rotate: 180 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Icon
+                icon="solar:logout-2-bold"
+                className="w-5 h-5 text-red-400 group-hover:text-red-300"
+              />
+            </motion.div>
+          </motion.button>
         )}
       </div>
     </motion.div>

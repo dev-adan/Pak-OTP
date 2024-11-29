@@ -41,6 +41,37 @@ export default function LoginModal({ isOpen, onClose }) {
   const [passwordError, setPasswordError] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
 
+  const getFormattedError = (errorMessage) => {
+    const errorMappings = {
+      'CredentialsSignin': 'Invalid email or password. Please try again.',
+      'Email already exists': 'An account with this email already exists. Please sign in instead.',
+      'Invalid OTP': 'The verification code you entered is incorrect. Please try again.',
+      'OTP expired': 'The verification code has expired. Please request a new one.',
+      'Email not found': 'No account found with this email address. Please sign up instead.',
+      'Password required': 'Please enter your password.',
+      'Invalid email format': 'Please enter a valid email address.',
+      'Email required': 'Please enter your email address.',
+      'Name required': 'Please enter your full name.',
+      'Password too short': 'Password must be at least 6 characters long.',
+      'Server error': 'Something went wrong. Please try again later.',
+      'Network error': 'Unable to connect. Please check your internet connection.',
+      'Default': 'An error occurred. Please try again.'
+    };
+
+    // Check for specific error patterns
+    if (typeof errorMessage === 'string') {
+      // Handle NextAuth error messages
+      if (errorMessage.includes('CredentialsSignin')) {
+        return errorMappings['CredentialsSignin'];
+      }
+      
+      // Return mapped error message if exists, otherwise return the default message
+      return errorMappings[errorMessage] || errorMappings['Default'];
+    }
+
+    return errorMappings['Default'];
+  };
+
   useEffect(() => {
     let timer;
     if (resendTimer > 0) {
@@ -161,14 +192,53 @@ export default function LoginModal({ isOpen, onClose }) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setFieldErrors({
+      email: false,
+      password: false,
+      name: false
+    });
 
     try {
-      // Reset errors
-      setFieldErrors({
+      // Form validation
+      let hasError = false;
+      const newFieldErrors = {
         email: false,
         password: false,
         name: false
-      });
+      };
+
+      if (!formData.email) {
+        newFieldErrors.email = true;
+        setError(getFormattedError('Email required'));
+        hasError = true;
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newFieldErrors.email = true;
+        setError(getFormattedError('Invalid email format'));
+        hasError = true;
+      }
+
+      if (!formData.password) {
+        newFieldErrors.password = true;
+        setError(getFormattedError('Password required'));
+        hasError = true;
+      } else if (formData.password.length < 6) {
+        newFieldErrors.password = true;
+        setError(getFormattedError('Password too short'));
+        hasError = true;
+      }
+
+      if (!isLogin && !formData.name) {
+        newFieldErrors.name = true;
+        setError(getFormattedError('Name required'));
+        hasError = true;
+      }
+
+      setFieldErrors(newFieldErrors);
+
+      if (hasError) {
+        setLoading(false);
+        return;
+      }
 
       if (isLogin) {
         setLoading(true);
@@ -187,15 +257,15 @@ export default function LoginModal({ isOpen, onClose }) {
           if (result.error.includes('No user found')) {
             setFieldErrors(prev => ({ ...prev, email: true }));
             const errorMsg = 'No account found with this email. Would you like to sign up instead?';
-            setError(errorMsg);
+            setError(getFormattedError('Email not found'));
             toast.error(errorMsg);
           } else if (result.error.includes('Invalid password')) {
             setFieldErrors(prev => ({ ...prev, password: true }));
             const errorMsg = 'Incorrect password. Please try again.';
-            setError(errorMsg);
+            setError(getFormattedError('Invalid password'));
             toast.error(errorMsg);
           } else {
-            setError(result.error || 'Login failed. Please try again.');
+            setError(getFormattedError(result.error || 'Login failed. Please try again.'));
             toast.error(result.error || 'Login failed. Please try again.');
           }
           setLoading(false);
@@ -231,7 +301,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
           if (!res.ok) {
             const data = await res.json();
-            setError(data.error || 'Registration failed');
+            setError(getFormattedError(data.error || 'Registration failed'));
             toast.error(data.error || 'Registration failed');
             setLoading(false);
             return;
@@ -241,14 +311,14 @@ export default function LoginModal({ isOpen, onClose }) {
           setSlideDirection(1);
           setShowOtpScreen(true);
         } catch (error) {
-          setError(error.message || 'Registration failed');
+          setError(getFormattedError(error.message || 'Registration failed'));
           toast.error(error.message || 'Registration failed');
         } finally {
           setLoading(false);
         }
       }
     } catch (error) {
-      setError(error.message);
+      setError(getFormattedError(error.message));
       toast.error(error.message);
     } finally {
       setLoading(false);
@@ -330,7 +400,7 @@ export default function LoginModal({ isOpen, onClose }) {
     try {
       const otp = otpDigits.join('');
       if (!otp || otp.length !== 6) {
-        setError('Please enter a valid 6-digit OTP');
+        setError(getFormattedError('Invalid OTP'));
         toast.error('Please enter a valid 6-digit OTP');
         return;
       }
@@ -350,7 +420,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'OTP verification failed');
+        setError(getFormattedError(data.error || 'OTP verification failed'));
         toast.error(data.error || 'OTP verification failed');
         return;
       }
@@ -375,7 +445,7 @@ export default function LoginModal({ isOpen, onClose }) {
       });
 
       if (result?.error) {
-        setError('Failed to log in after registration. Please try logging in manually.');
+        setError(getFormattedError('Failed to log in after registration. Please try logging in manually.'));
         toast.error('Failed to log in after registration. Please try logging in manually.');
         return;
       }
@@ -387,7 +457,7 @@ export default function LoginModal({ isOpen, onClose }) {
       await new Promise(resolve => setTimeout(resolve, 500));
       router.push(result.url || callbackUrl);
     } catch (error) {
-      setError(error.message);
+      setError(getFormattedError(error.message));
       toast.error(error.message);
     } finally {
       setLoading(false);
@@ -399,12 +469,12 @@ export default function LoginModal({ isOpen, onClose }) {
     setPasswordError('');
 
     if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+      setPasswordError(getFormattedError('Password too short'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match');
+      setPasswordError(getFormattedError('Passwords do not match'));
       return;
     }
 
@@ -466,7 +536,7 @@ export default function LoginModal({ isOpen, onClose }) {
     } catch (error) {
       console.error('Resend OTP error:', error);
       toast.error(error.message || 'Failed to resend OTP');
-      setError(error.message || 'Failed to resend OTP');
+      setError(getFormattedError(error.message || 'Failed to resend OTP'));
     } finally {
       setLoading(false);
     }
@@ -480,12 +550,12 @@ export default function LoginModal({ isOpen, onClose }) {
       setError('');
 
       if (!resetEmail) {
-        throw new Error('Email is required');
+        throw new Error('Email required');
       }
 
       // Validate email format
       if (!isEmailValid) {
-        throw new Error('Please enter a valid email address');
+        throw new Error('Invalid email format');
       }
 
       const res = await fetch('/api/auth/reset-password', {
@@ -508,7 +578,7 @@ export default function LoginModal({ isOpen, onClose }) {
       setResendTimer(60);
     } catch (error) {
       toast.error(error.message);
-      setError(error.message);
+      setError(getFormattedError(error.message));
     } finally {
       setLoading(false);
     }
@@ -550,7 +620,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
       const otp = resetOtpDigits.join('');
       if (!otp || otp.length !== 6) {
-        throw new Error('Please enter a valid 6-digit code');
+        throw new Error('Invalid OTP');
       }
 
       // Store the OTP for later use in final reset step
@@ -577,7 +647,7 @@ export default function LoginModal({ isOpen, onClose }) {
       setShowNewPasswordFields(true);
     } catch (error) {
       toast.error(error.message);
-      setError(error.message);
+      setError(getFormattedError(error.message));
     } finally {
       setLoading(false);
     }
@@ -592,19 +662,19 @@ export default function LoginModal({ isOpen, onClose }) {
       setPasswordError('');
 
       if (!newPassword) {
-        setPasswordError('New password is required');
+        setPasswordError(getFormattedError('Password required'));
         setLoading(false);
         return;
       }
 
       if (newPassword.length < 8) {
-        setPasswordError('Password must be at least 8 characters long');
+        setPasswordError(getFormattedError('Password too short'));
         setLoading(false);
         return;
       }
 
       if (newPassword !== confirmPassword) {
-        setPasswordError('Passwords do not match');
+        setPasswordError(getFormattedError('Passwords do not match'));
         setLoading(false);
         return;
       }
@@ -649,7 +719,7 @@ export default function LoginModal({ isOpen, onClose }) {
       setIsLogin(true);
     } catch (error) {
       toast.error(error.message);
-      setError(error.message);
+      setError(getFormattedError(error.message));
     } finally {
       setLoading(false);
     }
@@ -663,7 +733,7 @@ export default function LoginModal({ isOpen, onClose }) {
       setError('');
 
       if (!resetEmail) {
-        throw new Error('Email is required');
+        throw new Error('Email required');
       }
 
       const res = await fetch('/api/auth/reset-password', {
@@ -688,7 +758,7 @@ export default function LoginModal({ isOpen, onClose }) {
       toast.success(data.message || 'New code sent to your email');
     } catch (error) {
       toast.error(error.message);
-      setError(error.message);
+      setError(getFormattedError(error.message));
     } finally {
       setResendLoading(false);
     }
@@ -1044,7 +1114,28 @@ export default function LoginModal({ isOpen, onClose }) {
             onClick={(e) => e.stopPropagation()}
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
-            <div className="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-md">
+            <div className="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-md relative">
+              {/* Close button */}
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors z-50"
+                aria-label="Close authentication modal"
+              >
+                <svg
+                  className="h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
               {isResetPassword ? (
                 renderResetPassword()
               ) : showOtpScreen ? (
