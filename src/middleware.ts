@@ -30,11 +30,6 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  // Redirect authenticated users away from auth pages
-  if (request.nextUrl.pathname === '/' && session) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
   return NextResponse.next();
 }
 
