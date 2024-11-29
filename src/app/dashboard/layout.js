@@ -6,19 +6,19 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import Logo from '@/components/shared/Logo';
 
 function DashboardContent({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
 
   // Handle logout
   const handleLogout = () => {
     // Close any open menus first
-    setIsProfileOpen(false);
     signOut({ callbackUrl: '/' });
   };
 
@@ -101,34 +101,15 @@ function DashboardContent({ children }) {
       <div 
         style={sidebarStyle}
         className={`fixed top-0 left-0 z-40 h-screen bg-white border-r border-gray-200 shadow-sm transition-all duration-300 ${
-          isMobileView && !isSidebarOpen ? 'pointer-events-none' : ''
+          isMobileView && !isSidebarOpen ? 'pointer-events-none opacity-0' : ''
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {/* Logo Section */}
           <div className="h-16 flex items-center justify-between px-4">
-            <Link href="/" className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center w-full' : 'space-x-3'}`}>
-              <div className={`w-10 h-10 relative flex-shrink-0 ${isMobileView && !isSidebarOpen ? 'hidden' : ''}`}>
-                <svg viewBox="0 0 100 100" className="w-full h-full">
-                  <path
-                    d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
-                    className="fill-indigo-600"
-                  />
-                  <path
-                    d="M35 50 C35 40, 50 40, 50 50 C50 60, 65 60, 65 50"
-                    className="fill-none stroke-white stroke-[3]"
-                  />
-                </svg>
-              </div>
-              {(isSidebarOpen || isMobileView) && (
-                <div className="flex-1 min-w-0 max-w-[160px]">
-                  <h3 className="font-medium text-gray-900 truncate text-sm">{session?.user?.name || 'User'}</h3>
-                  <p className="text-xs text-gray-500 truncate w-full">
-                    {session?.user?.email}
-                  </p>
-                </div>
-              )}
-            </Link>
+            <div className="flex items-center">
+              <Logo href="/dashboard" showText={isSidebarOpen || isMobileView} />
+            </div>
             {!isMobileView && (
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}

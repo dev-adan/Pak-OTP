@@ -246,39 +246,88 @@ export default function Settings() {
       </div>
 
       {/* Active Sessions Section */}
-      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-lg p-6 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Active Sessions</h2>
+      <div className="bg-gray-900 shadow-xl rounded-2xl p-8 mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              Active Sessions
+            </h2>
+            <p className="text-gray-400 text-sm mt-1">
+              Manage your active login sessions across different devices
+            </p>
+          </div>
+          
           {sessions.length > 1 && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleLogoutAllSessions}
               disabled={revoking}
-              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300
-                       transition-colors duration-200 flex items-center space-x-2"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl 
+                       bg-red-500/10 text-red-400 hover:bg-red-500/20
+                       transition-colors duration-200 font-medium text-sm"
             >
               <Icon icon="material-symbols:logout" className="w-5 h-5" />
               <span>End All Other Sessions</span>
-            </button>
+            </motion.button>
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="relative">
           {sessions.length === 0 ? (
-            <div className="text-center py-8">
-              <Icon icon="material-symbols:devices" className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">
-                No active sessions found
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-12 px-4"
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-800 
+                            flex items-center justify-center">
+                <Icon 
+                  icon="material-symbols:devices" 
+                  className="w-8 h-8 text-gray-500" 
+                />
+              </div>
+              <h3 className="text-lg font-medium text-gray-300 mb-2">
+                No Active Sessions
+              </h3>
+              <p className="text-gray-500 max-w-sm mx-auto">
+                There are currently no active sessions on your account
               </p>
-            </div>
+            </motion.div>
           ) : (
-            sessions.map((session) => (
-              <ActiveSessionCard
-                key={session._id}
-                session={session}
-                onRevoke={handleLogoutSession}
-                isCurrentSession={session.isCurrentSession}
-              />
-            ))
+            <>
+              {/* Horizontal scroll indicators */}
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-12 h-full bg-gradient-to-r from-gray-900 to-transparent z-10" />
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-12 h-full bg-gradient-to-l from-gray-900 to-transparent z-10" />
+              
+              {/* Scrollable container */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-x-auto pb-4 -mx-4 px-4"
+                style={{ 
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#4B5563 #1F2937'
+                }}
+              >
+                <div className="flex gap-6 min-w-min">
+                  {sessions.map((session, index) => (
+                    <motion.div
+                      key={session._id}
+                      initial={{ opacity: 0, x: 50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <ActiveSessionCard
+                        session={session}
+                        onLogout={handleLogoutSession}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            </>
           )}
         </div>
       </div>

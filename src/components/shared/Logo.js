@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
-export default function Logo({ className = '' }) {
+export default function Logo({ className = '', showText = true, href = '/' }) {
   return (
-    <Link href="/" className={`flex items-center space-x-3 ${className}`}>
+    <Link href={href} className={`flex items-center space-x-3 ${className}`}>
       <div className="w-10 h-10 md:w-12 md:h-12 relative">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
+        <motion.svg viewBox="0 0 100 100" className="w-full h-full">
           {/* Background hexagon */}
           <motion.path
             d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
@@ -76,12 +76,14 @@ export default function Logo({ className = '' }) {
               ease: "easeInOut"
             }}
           />
-        </svg>
+        </motion.svg>
       </div>
-      <div className="flex flex-col">
-        <span className="text-lg font-bold text-indigo-600 leading-none">Pak-OTP</span>
-        <span className="text-xs text-gray-500">Secure Authentication</span>
-      </div>
+      {showText && (
+        <div className="flex flex-col">
+          <span className="text-lg font-bold text-indigo-600 leading-none">Pak-OTP</span>
+          <span className="text-xs text-gray-500">Secure Authentication</span>
+        </div>
+      )}
     </Link>
   );
 }

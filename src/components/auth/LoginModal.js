@@ -784,7 +784,7 @@ export default function LoginModal({ isOpen, onClose }) {
                   onChange={(e) => handleResetOtpChange(index, e.target.value)}
                   onPaste={handleResetOtpPaste}
                   ref={resetOtpRefs[index]}
-                  className="w-12 h-12 text-center text-xl font-semibold border rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                  className="w-11 h-11 text-center text-xl font-semibold border rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                 />
               ))}
             </div>
@@ -978,7 +978,7 @@ export default function LoginModal({ isOpen, onClose }) {
               onPaste={handlePaste}
               data-index={index}
               onFocus={preventScrollBehavior}
-              className={`w-[38px] h-[38px] sm:w-12 sm:h-12 text-center text-lg sm:text-xl font-semibold text-gray-900 border rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 focus:ring-offset-0 p-0 shadow-sm`}
+              className={`w-[30px] h-[30px] xs:w-[35px] xs:h-[35px] sm:w-11 sm:h-11 text-center text-base xs:text-lg sm:text-xl font-semibold text-gray-900 border rounded-lg transition-all border-gray-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 focus:ring-offset-0 p-0 shadow-sm`}
               ref={otpInputRefs[index]}
             />
           ))}
