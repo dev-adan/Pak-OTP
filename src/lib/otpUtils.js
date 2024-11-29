@@ -74,11 +74,11 @@ export async function generateOTP(email, type = 'signup') {
 }
 
 // Verify OTP from MongoDB
-export async function verifyOTP(email, userOTP, type = 'signup') {
+export async function verifyOTP(email, userOTP, type = 'signup', deleteIfValid = false) {
   try {
     await connectDB();
     
-    logger.info(`Verifying OTP for email: ${email}, Type: ${type}`);
+    logger.info(`Verifying OTP for email: ${email}, Type: ${type}, DeleteIfValid: ${deleteIfValid}`);
     
     const otpDoc = await OTP.findOne({ 
       email: email.toLowerCase(),
@@ -99,13 +99,20 @@ export async function verifyOTP(email, userOTP, type = 'signup') {
     if (otpDoc.otp !== userOTP) {
       // Increment attempts
       await OTP.findByIdAndUpdate(otpDoc._id, { $inc: { attempts: 1 } });
-      logger.warn(`Invalid OTP attempt for ${email}. Expected: ${otpDoc.otp}, Received: ${userOTP}`);
+      logger.warn(`Invalid OTP attempt for ${email}. Attempts: ${otpDoc.attempts + 1}`);
       return { valid: false, message: 'Invalid OTP' };
     }
     
-    // Delete the OTP after successful verification
-    await OTP.deleteOne({ _id: otpDoc._id });
-    logger.info(`OTP verified successfully for email: ${email}`);
+    // Only delete OTP if deleteIfValid is true (final password reset)
+    if (deleteIfValid) {
+      logger.info(`Deleting OTP after successful verification for: ${email}`);
+      await OTP.deleteOne({ _id: otpDoc._id });
+    } else {
+      // Mark as verified but don't delete
+      await OTP.findByIdAndUpdate(otpDoc._id, { verified: true });
+      logger.info(`OTP marked as verified for: ${email}`);
+    }
+
     return { valid: true, message: 'OTP verified successfully' };
   } catch (error) {
     logger.error(`Error verifying OTP: ${error.message}`);

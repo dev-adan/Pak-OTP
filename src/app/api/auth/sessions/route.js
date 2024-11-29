@@ -50,21 +50,9 @@ export async function DELETE(req) {
 
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('sessionId');
-    const logoutAll = searchParams.get('all') === 'true';
 
-    if (logoutAll) {
-      // Logout from all devices except current
-      await Session.updateMany(
-        {
-          userId: session.user.id,
-          _id: { $ne: session.sessionId }
-        },
-        { isActive: false }
-      );
-
-      logger.info(`Logged out all other sessions for user: ${session.user.email}`);
-    } else if (sessionId) {
-      // Logout specific session
+    if (sessionId) {
+      // Deactivate specific session
       const targetSession = await Session.findOne({
         _id: sessionId,
         userId: session.user.id
@@ -77,20 +65,25 @@ export async function DELETE(req) {
         );
       }
 
-      if (targetSession._id.toString() === session.sessionId) {
-        return NextResponse.json(
-          { error: 'Cannot logout current session' },
-          { status: 400 }
-        );
-      }
-
-      await Session.findByIdAndUpdate(sessionId, { isActive: false });
-      logger.info(`Logged out session ${sessionId} for user: ${session.user.email}`);
+      await Session.findByIdAndUpdate(sessionId, { 
+        isActive: false,
+        deactivatedAt: new Date(),
+        deactivatedBy: session.user.id
+      });
+      
+      logger.info(`Deactivated session ${sessionId} for user: ${session.user.email}`);
     } else {
-      return NextResponse.json(
-        { error: 'Session ID required' },
-        { status: 400 }
+      // Deactivate all sessions for the user
+      await Session.updateMany(
+        { userId: session.user.id },
+        { 
+          isActive: false,
+          deactivatedAt: new Date(),
+          deactivatedBy: session.user.id
+        }
       );
+
+      logger.info(`Deactivated all sessions for user: ${session.user.email}`);
     }
 
     return NextResponse.json({ success: true });

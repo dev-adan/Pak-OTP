@@ -11,10 +11,10 @@ import { headers } from 'next/headers';
 export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: 'credentials',
+      name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' }
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         try {
@@ -55,13 +55,24 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
-        token.name = user.name;
-        token.role = user.role;
       }
+
+      if (trigger === 'signOut') {
+        try {
+          await connectDB();
+          await Session.deleteMany({ 
+            userId: token.id,
+            isActive: true 
+          });
+        } catch (error) {
+          logger.error(`Error deleting sessions: ${error.message}`);
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {
@@ -108,37 +119,22 @@ export const authOptions = {
       try {
         await connectDB();
         
-        // Get user agent info from the request headers
-        const headersList = headers();
-        const userAgent = headersList.get('user-agent') || '';
+        const headersList = await headers();
+        const userAgent = await headersList.get('user-agent') || 'Unknown';
+        const ip = (await headersList.get('x-forwarded-for'))?.split(',')[0] ||
+                   await headersList.get('x-real-ip') ||
+                   'Unknown';
         
-        let deviceInfo = {
-          browser: 'Unknown',
-          os: 'Unknown',
-          device: 'Desktop'
-        };
-
-        try {
-          const parser = new UAParser(userAgent);
-          const result = parser.getResult();
-          
-          deviceInfo = {
-            browser: `${result.browser.name || 'Unknown'} ${result.browser.version || ''}`.trim(),
-            os: `${result.os.name || 'Unknown'} ${result.os.version || ''}`.trim(),
-            device: result.device.type || (
-              /mobile/i.test(userAgent) ? 'Mobile' :
-              /tablet/i.test(userAgent) ? 'Tablet' : 'Desktop'
-            )
-          };
-        } catch (parseError) {
-          logger.warn(`Error parsing user agent: ${parseError.message}`);
-        }
-
-        // Create new session
+        const ua = UAParser(userAgent);
+        
         await Session.create({
           userId: user.id,
-          deviceInfo,
-          ipAddress: headersList.get('x-forwarded-for') || 'Unknown',
+          deviceInfo: {
+            browser: ua.browser.name || 'Unknown',
+            os: ua.os.name || 'Unknown',
+            device: ua.device.type || 'Unknown'
+          },
+          ipAddress: ip,
           lastAccessed: new Date(),
           isActive: true
         });
@@ -148,6 +144,19 @@ export const authOptions = {
       } catch (error) {
         logger.error(`Error in signIn callback: ${error.message}`);
         return false;
+      }
+    }
+  },
+  events: {
+    async signOut({ token }) {
+      try {
+        await connectDB();
+        await Session.deleteMany({ 
+          userId: token.id,
+          isActive: true 
+        });
+      } catch (error) {
+        logger.error(`Error in signOut event: ${error.message}`);
       }
     }
   },

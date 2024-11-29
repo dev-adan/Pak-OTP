@@ -20,6 +20,14 @@ const sessionSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  deactivatedAt: {
+    type: Date,
+    default: null
+  },
+  deactivatedBy: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

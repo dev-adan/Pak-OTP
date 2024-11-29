@@ -479,18 +479,21 @@ export default function LoginModal({ isOpen, onClose }) {
       setLoading(true);
       setError('');
 
-      // Validate email format
-      if (!isEmailValid) {
-        setError('Please enter a valid email address');
-        return;
+      if (!resetEmail) {
+        throw new Error('Email is required');
       }
 
-      const res = await fetch('/api/auth/send-otp', {
+      // Validate email format
+      if (!isEmailValid) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: resetEmail,
-          isReset: true
+          step: 'initiate'
         }),
       });
 
@@ -500,14 +503,12 @@ export default function LoginModal({ isOpen, onClose }) {
         throw new Error(data.error || 'Failed to send reset code');
       }
 
-      // Show success message
-      toast.success('Reset code sent successfully');
+      toast.success(data.message || 'Reset code sent to your email');
       setShowOtpInput(true);
-      setError('');
+      setResendTimer(60);
     } catch (error) {
       toast.error(error.message);
       setError(error.message);
-      setShowOtpInput(false);
     } finally {
       setLoading(false);
     }
@@ -540,43 +541,103 @@ export default function LoginModal({ isOpen, onClose }) {
     }
   };
 
-  const handleResetPasswordSubmit = async (e) => {
+  const handleResetOtpSubmit = async (e) => {
     e.preventDefault();
-    setPasswordError('');
+    
+    try {
+      setLoading(true);
+      setError('');
 
-    // Validate password
-    if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
-      return;
-    }
+      const otp = resetOtpDigits.join('');
+      if (!otp || otp.length !== 6) {
+        throw new Error('Please enter a valid 6-digit code');
+      }
 
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match');
-      return;
+      // Store the OTP for later use in final reset step
+      sessionStorage.setItem('resetOtp', otp);
+
+      // Verify OTP
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resetEmail,
+          otp: otp,
+          step: 'verify'
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid verification code');
+      }
+
+      toast.success('Code verified successfully');
+      setShowNewPasswordFields(true);
+    } catch (error) {
+      toast.error(error.message);
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
 
     try {
       setLoading(true);
       setError('');
+      setPasswordError('');
+
+      if (!newPassword) {
+        setPasswordError('New password is required');
+        setLoading(false);
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        setPasswordError('Password must be at least 8 characters long');
+        setLoading(false);
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setPasswordError('Passwords do not match');
+        setLoading(false);
+        return;
+      }
+
+      // Get the stored OTP
+      const otp = sessionStorage.getItem('resetOtp');
+      if (!otp || otp.length !== 6) {
+        throw new Error('Invalid verification code. Please try again.');
+      }
 
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: resetEmail,
-          otp: resetOtpDigits.join(''),
-          newPassword
+          otp: otp,
+          newPassword: newPassword,
+          step: 'reset'
         }),
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to reset password');
       }
 
-      toast.success('Password reset successful! Please login with your new password.');
+      toast.success(data.message || 'Password reset successful');
       
-      // Reset states and show login screen
+      // Clear stored OTP
+      sessionStorage.removeItem('resetOtp');
+      
+      // Reset all states and switch to login
       setIsResetPassword(false);
       setShowOtpInput(false);
       setShowNewPasswordFields(false);
@@ -594,61 +655,37 @@ export default function LoginModal({ isOpen, onClose }) {
     }
   };
 
-  const handleResetOtpSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      setLoading(true);
-      setError('');
-
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: resetEmail,
-          otp: resetOtpDigits.join(''),
-          isReset: true
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Invalid OTP');
-      }
-
-      // Only proceed to password reset if OTP is valid
-      setShowNewPasswordFields(true);
-      setError('');
-    } catch (error) {
-      toast.error(error.message);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleResendResetOtp = async () => {
+    if (resendTimer > 0) return;
+    
     try {
       setResendLoading(true);
       setError('');
 
-      const res = await fetch('/api/auth/send-otp', {
+      if (!resetEmail) {
+        throw new Error('Email is required');
+      }
+
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: resetEmail,
-          isReset: true
+          step: 'initiate'
         }),
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to resend code');
       }
 
-      toast.success('New code sent successfully');
-      setResendTimer(30); // Start 30 second timer
-      setResetOtpDigits(['', '', '', '', '', '']); // Clear OTP inputs
+      // Clear OTP fields and reset timer
+      setResetOtpDigits(['', '', '', '', '', '']);
+      resetOtpRefs[0].current?.focus();
+      setResendTimer(60);
+      toast.success(data.message || 'New code sent to your email');
     } catch (error) {
       toast.error(error.message);
       setError(error.message);
@@ -781,7 +818,7 @@ export default function LoginModal({ isOpen, onClose }) {
         </form>
       ) : (
         // New password form
-        <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+        <form onSubmit={handlePasswordReset} className="space-y-4">
           <div>
             <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
               New Password

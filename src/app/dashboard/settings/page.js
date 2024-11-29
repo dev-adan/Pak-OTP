@@ -132,46 +132,57 @@ export default function Settings() {
     }
   };
 
-  const handleLogout = async (sessionId) => {
+  const handleLogoutSession = async (sessionId) => {
     try {
       setRevoking(true);
+      addLog('Revoking session...', 'info');
+
       const res = await fetch(`/api/auth/sessions?sessionId=${sessionId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
 
       if (!res.ok) {
-        throw new Error('Failed to end session');
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to revoke session');
       }
 
-      setSessions(prev => prev.filter(s => s._id !== sessionId));
-      toast.success('Device logged out successfully');
-      addLog('Device logged out successfully', 'success');
+      // Refresh sessions list
+      const updatedRes = await fetch('/api/auth/sessions');
+      const updatedData = await updatedRes.json();
+      setSessions(updatedData.sessions || []);
+
+      toast.success('Session revoked successfully');
+      addLog('✅ Session revoked successfully', 'success');
     } catch (error) {
       toast.error(error.message);
-      addLog(`Failed to end session: ${error.message}`, 'error');
+      addLog(`❌ Error: ${error.message}`, 'error');
     } finally {
       setRevoking(false);
     }
   };
 
-  const handleLogoutAll = async () => {
+  const handleLogoutAllSessions = async () => {
     try {
       setRevoking(true);
-      const res = await fetch('/api/auth/sessions?all=true', {
-        method: 'DELETE'
+      addLog('Revoking all sessions...', 'info');
+
+      const res = await fetch('/api/auth/sessions', {
+        method: 'DELETE',
       });
 
       if (!res.ok) {
-        throw new Error('Failed to end all sessions');
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to revoke all sessions');
       }
 
-      // Keep only the current session
-      setSessions(prev => prev.filter(s => s.isCurrentSession));
-      toast.success('All other devices logged out successfully');
-      addLog('All other devices logged out successfully', 'success');
+      // Sign out from current session
+      signOut({ callbackUrl: '/' });
+      
+      toast.success('All sessions revoked successfully');
+      addLog('✅ All sessions revoked successfully', 'success');
     } catch (error) {
       toast.error(error.message);
-      addLog(`Failed to end all sessions: ${error.message}`, 'error');
+      addLog(`❌ Error: ${error.message}`, 'error');
     } finally {
       setRevoking(false);
     }
@@ -240,7 +251,7 @@ export default function Settings() {
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Active Sessions</h2>
           {sessions.length > 1 && (
             <button
-              onClick={handleLogoutAll}
+              onClick={handleLogoutAllSessions}
               disabled={revoking}
               className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300
                        transition-colors duration-200 flex items-center space-x-2"
@@ -264,7 +275,7 @@ export default function Settings() {
               <ActiveSessionCard
                 key={session._id}
                 session={session}
-                onRevoke={handleLogout}
+                onRevoke={handleLogoutSession}
                 isCurrentSession={session.isCurrentSession}
               />
             ))
