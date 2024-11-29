@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { useState, useRef, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast'; // Import toast
 
 export default function LoginModal({ isOpen, onClose }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [isResetPassword, setIsResetPassword] = useState(false);
   const [showOtpScreen, setShowOtpScreen] = useState(false);
@@ -173,14 +174,13 @@ export default function LoginModal({ isOpen, onClose }) {
         setLoading(true);
         
         // Get the callback URL from URL params or use default
-        const params = new URLSearchParams(window.location.search);
-        const callbackUrl = params.get('callbackUrl') || '/dashboard';
+        const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
         
         const result = await signIn('credentials', {
           email: formData.email,
           password: formData.password,
           redirect: false,
-          callbackUrl: callbackUrl
+          callbackUrl
         });
 
         if (result?.error) {
@@ -211,9 +211,9 @@ export default function LoginModal({ isOpen, onClose }) {
         
         // Use router.push for client-side navigation
         if (result.url) {
-          window.location.href = result.url;
+          router.push(result.url);
         } else {
-          window.location.href = callbackUrl;
+          router.push(callbackUrl);
         }
       } else {
         // Handle Sign Up

@@ -2,9 +2,9 @@
 
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import StatCard from '@/components/shared/StatCard';
 import PlanCard from '@/components/shared/PlanCard';
 import TransactionCard from '@/components/shared/TransactionCard';
@@ -74,9 +74,20 @@ function LoadingSpinner() {
 
 function DashboardContent() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push('/auth/signin');
+    }
+  }, [status, router]);
 
   if (status === "loading") {
     return <LoadingSpinner />;
+  }
+
+  if (!session) {
+    return null;
   }
 
   return (
@@ -160,6 +171,17 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
+  const { status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      window.location.href = '/auth/signin';
+    },
+  });
+
+  if (status === "loading") {
+    return <LoadingSpinner />;
+  }
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <DashboardContent />

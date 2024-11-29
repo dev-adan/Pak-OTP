@@ -16,6 +16,7 @@ export default function Settings() {
     newPassword: '',
     confirmPassword: '',
   });
+  const [sessions, setSessions] = useState([]);
 
   // Password validation states
   const passwordValidation = useMemo(() => {
@@ -34,6 +35,15 @@ export default function Settings() {
 
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      const res = await fetch('/api/auth/sessions');
+      const data = await res.json();
+      setSessions(data.sessions);
+    };
+    fetchSessions();
   }, []);
 
   const addLog = (message, type = 'info') => {
@@ -102,6 +112,40 @@ export default function Settings() {
     }
   };
 
+  const handleRevokeSession = async (sessionId) => {
+    try {
+      const res = await fetch(`/api/auth/revoke-session/${sessionId}`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to revoke session');
+      }
+
+      setSessions(prev => prev.filter(session => session._id !== sessionId));
+      toast.success('Session revoked successfully');
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleRevokeAllSessions = async () => {
+    try {
+      const res = await fetch('/api/auth/revoke-all-sessions', {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to revoke all sessions');
+      }
+
+      setSessions([]);
+      toast.success('All sessions revoked successfully');
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   // Server-side render
   if (!isClient || status === 'loading') {
     return (
@@ -158,6 +202,50 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Active Sessions */}
+      <section className="mb-8">
+        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-1 rounded-2xl">
+          <div className="bg-white p-6 rounded-2xl">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Active Sessions</h2>
+            <div className="space-y-4">
+              {sessions.map((session) => (
+                <div key={session._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2 bg-white rounded-lg shadow-sm">
+                      <Icon 
+                        icon={session.deviceInfo.device === 'mobile' ? 'solar:smartphone-bold-duotone' : 'solar:monitor-bold-duotone'} 
+                        className="w-6 h-6 text-indigo-600"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{session.deviceInfo.browser} on {session.deviceInfo.os}</p>
+                      <p className="text-sm text-gray-500">
+                        Last active: {new Date(session.lastActivity).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-gray-400">{session.deviceInfo.ip}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRevokeSession(session._id)}
+                    className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Revoke
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={handleRevokeAllSessions}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Revoke All Sessions
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="space-y-6">
         {/* Password Section */}
@@ -369,7 +457,7 @@ export default function Settings() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm hover:bg-indigo-600 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors"
               >
                 Enable 2FA
               </motion.button>
@@ -382,7 +470,7 @@ export default function Settings() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
               >
                 Sign Out All
               </motion.button>
