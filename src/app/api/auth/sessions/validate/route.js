@@ -42,7 +42,10 @@ export async function POST(req) {
       lastAccessed: new Date()
     });
 
-    return NextResponse.json({ valid: true });
+    return NextResponse.json({ 
+      valid: true,
+      sessionId: session._id.toString() // Return the current session ID
+    });
   } catch (error) {
     console.error('Session validation error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

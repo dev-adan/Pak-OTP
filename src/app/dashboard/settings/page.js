@@ -65,9 +65,26 @@ export default function Settings() {
           const res = await fetch('/api/auth/sessions');
           const data = await res.json();
           if (data.sessions) {
-            // Map sessions to include device info
+            // Get current session ID from MongoDB validation endpoint
+            const validationRes = await fetch('/api/auth/sessions/validate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ 
+                userId: session.user.id || session.user._id || session.user.userId 
+              }),
+            });
+            
+            const validationData = await validationRes.json();
+            const currentSessionId = validationData.sessionId;
+
+            console.log(currentSessionId);
+            console.log('data session',data)
+            // Map sessions to include device info and current device flag
             const sessionsWithDeviceInfo = data.sessions.map(session => ({
               ...session,
+              isCurrentDevice: session._id === currentSessionId,
               deviceInfo: session.deviceInfo || {
                 browser: 'Unknown Browser',
                 os: 'Unknown OS',
@@ -541,13 +558,13 @@ export default function Settings() {
                                     <h3 className="font-medium text-gray-900">
                                       {device.name || session.deviceInfo?.os || 'Unknown Device'}
                                     </h3>
-                                    {session.current && (
+                                    {session.isCurrentDevice && (
                                       <motion.span 
-                                        initial={{ opacity: 0, scale: 0.5 }}
+                                        initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="px-2 py-0.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-full border border-indigo-100"
+                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
                                       >
-                                        Current Device
+                                        This Device
                                       </motion.span>
                                     )}
                                   </div>
@@ -578,7 +595,7 @@ export default function Settings() {
                               </div>
 
                               <div className="flex items-center space-x-1.5">
-                                {!session.current && (
+                                {!session.isCurrentDevice && (
                                   <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
