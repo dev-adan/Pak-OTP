@@ -55,7 +55,7 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -64,12 +64,17 @@ export const authOptions = {
       if (trigger === 'signOut') {
         try {
           await connectDB();
-          await Session.deleteMany({ 
-            userId: token.id,
-            isActive: true 
-          });
+          // Only deactivate the current session
+          if (session?.sessionId) {
+            await Session.findByIdAndUpdate(session.sessionId, {
+              isActive: false,
+              deactivatedAt: new Date(),
+              deactivatedBy: token.id
+            });
+            logger.info(`Session ${session.sessionId} deactivated for user: ${token.email}`);
+          }
         } catch (error) {
-          logger.error(`Error deleting sessions: ${error.message}`);
+          logger.error(`Error deactivating session: ${error.message}`);
         }
       }
       
@@ -148,13 +153,18 @@ export const authOptions = {
     }
   },
   events: {
-    async signOut({ token }) {
+    async signOut({ token, session }) {
       try {
         await connectDB();
-        await Session.deleteMany({ 
-          userId: token.id,
-          isActive: true 
-        });
+        // Only deactivate the current session
+        if (session?.sessionId) {
+          await Session.findByIdAndUpdate(session.sessionId, {
+            isActive: false,
+            deactivatedAt: new Date(),
+            deactivatedBy: token.id
+          });
+          logger.info(`Session ${session.sessionId} deactivated for user: ${token.email}`);
+        }
       } catch (error) {
         logger.error(`Error in signOut event: ${error.message}`);
       }

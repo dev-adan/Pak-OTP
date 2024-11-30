@@ -65,27 +65,11 @@ export default function Settings() {
           const res = await fetch('/api/auth/sessions');
           const data = await res.json();
           if (data.sessions) {
-            // Get current session ID from MongoDB validation endpoint
-            const validationRes = await fetch('/api/auth/sessions/validate', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ 
-                userId: session.user.id || session.user._id || session.user.userId 
-              }),
-            });
-            
-            const validationData = await validationRes.json();
-            const currentSessionId = validationData.sessionId;
-
-            console.log(currentSessionId);
-            console.log('data session',data)
-            // Map sessions to include device info and current device flag
-            const sessionsWithDeviceInfo = data.sessions.map(session => ({
-              ...session,
-              isCurrentDevice: session._id === currentSessionId,
-              deviceInfo: session.deviceInfo || {
+            // Use sessionId directly from the NextAuth session object
+            const sessionsWithDeviceInfo = data.sessions.map(dbSession => ({
+              ...dbSession,
+              isCurrentDevice: dbSession._id === session.sessionId,
+              deviceInfo: dbSession.deviceInfo || {
                 browser: 'Unknown Browser',
                 os: 'Unknown OS',
                 device: 'Unknown Device'
@@ -314,10 +298,20 @@ export default function Settings() {
       default: 'solar:globe-bold-duotone'
     };
 
-    const device = deviceTypes[session.deviceType?.toLowerCase() || 'desktop'];
+    // Get device type from deviceInfo
+    let deviceType = 'desktop'; // default
+    const device = session.deviceInfo?.device?.toLowerCase() || '';
+    
+    if (device.includes('mobile') || device.includes('phone')) {
+      deviceType = 'mobile';
+    } else if (device.includes('tablet')) {
+      deviceType = 'tablet';
+    }
+
+    const deviceInfo = deviceTypes[deviceType];
     const browserIcon = browserIcons[session.deviceInfo?.browser?.toLowerCase()] || browserIcons.default;
 
-    return { device, browserIcon };
+    return { device: deviceInfo, browserIcon };
   };
 
   const getBrowserInfo = (browser) => {
