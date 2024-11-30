@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import Logo from '../shared/Logo';
 import { useSessionValidation } from '@/hooks/useSessionValidation';
 import toast from 'react-hot-toast';
+import { signOut } from 'next-auth/react';
 
 export default function Navbar({ onLoginClick }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -28,16 +29,63 @@ export default function Navbar({ onLoginClick }) {
 
   const handleLogout = async () => {
     try {
-      await Promise.resolve();
-      localStorage.removeItem('user-settings');
-      sessionStorage.clear();
+      console.log('Starting logout process...');
+      
+      // Start with local storage cleanup
+      const cleanupStorage = async () => {
+        try {
+          console.log('Cleaning up local storage...');
+          localStorage.removeItem('user-settings');
+          sessionStorage.clear();
+          localStorage.removeItem('theme');
+          localStorage.removeItem('language');
+          console.log('Local storage cleanup completed');
+        } catch (storageError) {
+          console.error('Storage cleanup error:', storageError);
+        }
+      };
+
+      // Deactivate current session in the database
+      const deactivateSession = async () => {
+        try {
+          console.log('Deactivating current session...');
+          // We'll use the session object which contains the current sessionId
+          const response = await fetch('/api/auth/sessions/cleanup', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          const result = await response.json();
+          console.log('Session cleanup result:', result);
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to cleanup session');
+          }
+        } catch (sessionError) {
+          console.error('Session cleanup error:', sessionError);
+        }
+      };
+
+      // Execute cleanup operations in parallel
+      console.log('Executing cleanup operations...');
+      await Promise.all([
+        cleanupStorage(),
+        deactivateSession()
+      ]);
+
+      console.log('Initiating NextAuth signOut...');
+      // Finally, sign out using NextAuth
       await signOut({ 
         redirect: true,
         callbackUrl: '/'
       });
+
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to logout. Please try again.');
+      window.location.href = '/';
     }
   };
 

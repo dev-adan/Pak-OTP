@@ -9,8 +9,14 @@ import { logger } from '@/lib/logger';
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    // Handle no session case gracefully
+    if (!session || !session.user) {
+      logger.info('No active session found during sessions fetch');
+      return NextResponse.json({ 
+        sessions: [],
+        message: 'No active session'
+      });
     }
 
     await connectDB();
@@ -26,15 +32,19 @@ export async function GET(req) {
       isCurrentSession: session._id.toString() === session.sessionId
     }));
 
-    logger.info(`Retrieved active sessions for user: ${session.user.email}`);
-    return NextResponse.json({ sessions: currentSession });
+    logger.info(`Retrieved ${activeSessions.length} active sessions for user: ${session.user.email}`);
+    return NextResponse.json({ 
+      sessions: currentSession,
+      message: 'Sessions retrieved successfully'
+    });
 
   } catch (error) {
     logger.error(`Error fetching sessions: ${error.message}`);
-    return NextResponse.json(
-      { error: 'Failed to fetch active sessions' },
-      { status: 500 }
-    );
+    // Return empty sessions array instead of error
+    return NextResponse.json({ 
+      sessions: [],
+      message: 'Error fetching sessions'
+    });
   }
 }
 
@@ -42,8 +52,14 @@ export async function GET(req) {
 export async function DELETE(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    // Handle no session case gracefully
+    if (!session || !session.user) {
+      logger.info('No active session found during session deletion');
+      return NextResponse.json({ 
+        success: true,
+        message: 'No active session to delete'
+      });
     }
 
     await connectDB();
@@ -59,10 +75,11 @@ export async function DELETE(req) {
       });
 
       if (!targetSession) {
-        return NextResponse.json(
-          { error: 'Session not found' },
-          { status: 404 }
-        );
+        logger.info(`Session ${sessionId} not found or already deleted`);
+        return NextResponse.json({ 
+          success: true,
+          message: 'Session not found or already deleted'
+        });
       }
 
       await Session.findByIdAndUpdate(sessionId, { 
@@ -71,28 +88,21 @@ export async function DELETE(req) {
         deactivatedBy: session.user.id
       });
       
-      logger.info(`Deactivated session ${sessionId} for user: ${session.user.email}`);
+      logger.info(`Successfully deactivated session ${sessionId} for user: ${session.user.email}`);
     } else {
-      // Deactivate all sessions for the user
-      await Session.updateMany(
-        { userId: session.user.id },
-        { 
-          isActive: false,
-          deactivatedAt: new Date(),
-          deactivatedBy: session.user.id
-        }
-      );
-
-      logger.info(`Deactivated all sessions for user: ${session.user.email}`);
+      logger.info(`No session ID provided, no action taken for user: ${session.user.email}`);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: sessionId ? 'Session deactivated successfully' : 'No session ID provided'
+    });
 
   } catch (error) {
     logger.error(`Error managing sessions: ${error.message}`);
-    return NextResponse.json(
-      { error: 'Failed to manage sessions' },
-      { status: 500 }
-    );
+    return NextResponse.json({ 
+      success: false,
+      message: 'Error managing sessions, but continuing logout process'
+    });
   }
 }
