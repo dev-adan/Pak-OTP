@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Logo from '../shared/Logo';
-import { useSession, signOut } from 'next-auth/react';
+import { useSessionValidation } from '@/hooks/useSessionValidation';
 import toast from 'react-hot-toast';
 
 export default function Navbar({ onLoginClick }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { data: session, status } = useSession();
+  const { session, status } = useSessionValidation();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

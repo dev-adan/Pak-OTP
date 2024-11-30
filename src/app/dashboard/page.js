@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useSession } from 'next-auth/react';
+import { useSessionValidation } from '@/hooks/useSessionValidation';
 import { Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import StatCard from '@/components/shared/StatCard';
@@ -73,7 +73,7 @@ function LoadingSpinner() {
 }
 
 function DashboardContent() {
-  const { data: session, status } = useSession();
+  const { session, status } = useSessionValidation();
   const router = useRouter();
 
   useEffect(() => {
@@ -171,7 +171,7 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
-  const { status } = useSession({
+  const { status } = useSessionValidation({
     required: true,
     onUnauthenticated() {
       window.location.href = '/auth/signin';
