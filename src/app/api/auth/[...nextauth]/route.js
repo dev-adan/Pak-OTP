@@ -153,17 +153,22 @@ export const authOptions = {
     }
   },
   events: {
-    async signOut({ token, session }) {
+    async signOut({ token }) {
       try {
+        logger.info('SignOut event triggered', { token });
         await connectDB();
+        
         // Only deactivate the current session
-        if (session?.sessionId) {
-          await Session.findByIdAndUpdate(session.sessionId, {
+        if (token?.sessionId) {
+          logger.info(`Deactivating session: ${token.sessionId}`);
+          await Session.findByIdAndUpdate(token.sessionId, {
             isActive: false,
             deactivatedAt: new Date(),
-            deactivatedBy: token.id
+            deactivatedBy: token.sub // token.sub contains the user ID
           });
-          logger.info(`Session ${session.sessionId} deactivated for user: ${token.email}`);
+          logger.info(`Session ${token.sessionId} deactivated for user: ${token.email}`);
+        } else {
+          logger.warn('No sessionId found in token during signOut');
         }
       } catch (error) {
         logger.error(`Error in signOut event: ${error.message}`);

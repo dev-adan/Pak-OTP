@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -59,25 +59,36 @@ export default function Settings() {
   // Fetch sessions when component mounts and session is available
   useEffect(() => {
     if (session) {
+      console.log('🔍 Current session data:', {
+        session,
+        token: session?.token,
+        sessionId: session?.sessionId,
+        user: session?.user
+      });
+
       const fetchSessions = async () => {
         setLoadingSessions(true);
         try {
           const res = await fetch('/api/auth/sessions');
           const data = await res.json();
+          console.log('📥 Fetched sessions:', data);
+          
           if (data.sessions) {
-            // Use sessionId directly from the NextAuth session object
+            // Use sessionId from the token
             const sessionsWithDeviceInfo = data.sessions.map(dbSession => ({
               ...dbSession,
-              isCurrentDevice: dbSession._id === session.sessionId,
+              isCurrentDevice: dbSession._id === session.token?.sessionId, // Use token.sessionId
               deviceInfo: dbSession.deviceInfo || {
                 browser: 'Unknown Browser',
                 os: 'Unknown OS',
                 device: 'Unknown Device'
               }
             }));
+            console.log('🔄 Processed sessions:', sessionsWithDeviceInfo);
             setSessions(sessionsWithDeviceInfo);
           }
         } catch (error) {
+          console.error('❌ Session fetch error:', error);
           toast.error('Failed to fetch sessions');
           addLog('Failed to fetch active sessions', 'error');
         } finally {
@@ -166,25 +177,68 @@ export default function Settings() {
   };
 
   const handleLogoutSession = async (sessionId) => {
+    console.log('🔍 Ending session:', sessionId);
+    
+    if (!sessionId) {
+      toast.error('Invalid session');
+      return;
+    }
+
+    // Check if this is the current session
+    const isCurrentSession = session?.token?.sessionId === sessionId;
+    console.log('🔍 Current session check:', isCurrentSession);
+
     try {
       setRevoking(true);
       addLog('Ending session...', 'info');
-
-      const response = await fetch('/api/auth/sessions', {
-        method: 'DELETE',
+      
+      const response = await fetch('/api/auth/sessions/end', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ sessionId })
       });
 
+      const data = await response.json();
+      console.log('🔍 Session end response:', { success: data.success, isLastSession: data.isLastSession });
+
       if (!response.ok) {
-        throw new Error('Failed to end session');
+        throw new Error(data.message || 'Failed to end session');
       }
 
+      // If this was the current session or the last session
+      if (isCurrentSession || data.isLastSession) {
+        console.log('🔍 Initiating logout - Current session:', isCurrentSession, 'Last session:', data.isLastSession);
+        addLog('Session ended, redirecting...', 'info');
+        toast.success('Session ended, redirecting...');
+
+        // Clean up storage
+        try {
+          localStorage.removeItem('user-settings');
+          sessionStorage.clear();
+          localStorage.removeItem('theme');
+          localStorage.removeItem('language');
+        } catch (error) {
+          console.error('Storage cleanup error:', error);
+        }
+
+        // Short delay to allow toast to be seen
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Redirect to login
+        router.replace('/?showLogin=true');
+        return;
+      }
+
+      // Update UI by removing the ended session
       setSessions(prevSessions => prevSessions.filter(s => s._id !== sessionId));
+      toast.success('Session ended successfully');
+      addLog('Session ended successfully', 'success');
     } catch (error) {
-      toast.error('Failed to end session. Please try again.');
+      console.error('Session end error:', error);
+      toast.error(error.message || 'Failed to end session. Please try again.');
+      addLog('Failed to end session', 'error');
     } finally {
       setRevoking(false);
     }
