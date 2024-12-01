@@ -16,7 +16,12 @@ export default function Settings() {
     },
   });
   
-  const [loading, setLoading] = useState(false);
+  // Consolidated loading states
+  const [loadingStates, setLoadingStates] = useState({
+    sessions: true,
+    password: false,
+    revoke: false
+  });
   const [logs, setLogs] = useState([]);
   const [formData, setFormData] = useState({
     currentPassword: '',
@@ -24,22 +29,8 @@ export default function Settings() {
     confirmPassword: '',
   });
   const [sessions, setSessions] = useState([]);
-  const [revoking, setRevoking] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [loadingSessions, setLoadingSessions] = useState(true);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // useEffect(() => {
-  //   console.log('Tooltip state:', {
-  //     visible: tooltipVisible,
-  //     position: tooltipPosition
-  //   });
-  // }, [tooltipVisible, tooltipPosition]);
 
   // Password validation states
   const passwordValidation = useMemo(() => {
@@ -59,40 +50,28 @@ export default function Settings() {
   // Fetch sessions when component mounts and session is available
   useEffect(() => {
     if (session) {
-      console.log('🔍 Current session data:', {
-        session,
-        token: session?.token,
-        sessionId: session?.sessionId,
-        user: session?.user
-      });
-
       const fetchSessions = async () => {
-        setLoadingSessions(true);
         try {
           const res = await fetch('/api/auth/sessions');
           const data = await res.json();
-          console.log('📥 Fetched sessions:', data);
           
           if (data.sessions) {
-            // Use sessionId from the token
             const sessionsWithDeviceInfo = data.sessions.map(dbSession => ({
               ...dbSession,
-              isCurrentDevice: dbSession._id === session.token?.sessionId, // Use token.sessionId
+              isCurrentDevice: dbSession._id === session.token?.sessionId,
               deviceInfo: dbSession.deviceInfo || {
                 browser: 'Unknown Browser',
                 os: 'Unknown OS',
                 device: 'Unknown Device'
               }
             }));
-            console.log('🔄 Processed sessions:', sessionsWithDeviceInfo);
             setSessions(sessionsWithDeviceInfo);
           }
         } catch (error) {
-          console.error('❌ Session fetch error:', error);
           toast.error('Failed to fetch sessions');
           addLog('Failed to fetch active sessions', 'error');
         } finally {
-          setLoadingSessions(false);
+          setLoadingStates(prev => ({ ...prev, sessions: false }));
         }
       };
       fetchSessions();
@@ -133,7 +112,7 @@ export default function Settings() {
     }
 
     try {
-      setLoading(true);
+      setLoadingStates(prev => ({ ...prev, password: true }));
       addLog('Initiating password change...', 'info');
 
       const res = await fetch('/api/auth/change-password', {
@@ -171,14 +150,14 @@ export default function Settings() {
       addLog(`❌ Error: ${error.message}`, 'error');
       toast.error(error.message);
     } finally {
-      setLoading(false);
+      setLoadingStates(prev => ({ ...prev, password: false }));
       addLog('Password change process completed', 'info');
     }
   };
 
   const handleLogoutAllSessions = async () => {
     try {
-      setRevoking(true);
+      setLoadingStates(prev => ({ ...prev, revoke: true }));
       addLog('Revoking all sessions...', 'info');
 
       const res = await fetch('/api/auth/sessions', {
@@ -198,86 +177,41 @@ export default function Settings() {
     } catch (error) {
       toast.error(error.message);
       addLog(`❌ Error: ${error.message}`, 'error');
-    } finally {
-      setRevoking(false);
     }
+    // No finally block needed since we're redirecting
   };
 
   const handleEndSession = async (sessionId) => {
-    if (!sessionId) {
-      toast.error('Invalid session');
-      return;
-    }
-
+    if (!sessionId) return toast.error('Invalid session');
+    
+    setLoadingStates(prev => ({ ...prev, revoke: true }));
     try {
-      setRevoking(true);
-      addLog('Ending session...', 'info');
-
       const response = await fetch('/api/auth/sessions/end-session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId })
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.error || 'Failed to end session');
       }
 
-      // Update UI by removing the ended session
-      setSessions(prevSessions => prevSessions.filter(s => s._id !== sessionId));
+      // Optimistically update UI
+      setSessions(prev => prev.filter(s => s._id !== sessionId));
       toast.success('Session ended successfully');
-      addLog('Session ended successfully', 'success');
     } catch (error) {
       console.error('Session end error:', error);
-      toast.error(error.message || 'Failed to end session. Please try again.');
-      addLog('Failed to end session', 'error');
+      window.location.reload(); // Force refresh on error
     } finally {
-      setRevoking(false);
+      setLoadingStates(prev => ({ ...prev, revoke: false }));
     }
   };
 
   const handleMouseMove = (e) => {
     const mouseX = e.clientX;
     const mouseY = e.clientY;
-    
-    setTooltipPosition({
-      x: mouseX,
-      y: mouseY
-    });
-  };
-
-  // Format date helper
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'N/A';
-      
-      const now = new Date();
-      const diff = now - date;
-      
-      // If less than 24 hours, show relative time
-      if (diff < 24 * 60 * 60 * 1000) {
-        const hours = Math.floor(diff / (60 * 60 * 1000));
-        if (hours < 1) {
-          const minutes = Math.floor(diff / (60 * 1000));
-          return minutes < 1 ? 'Just now' : `${minutes}m ago`;
-        }
-        return `${hours}h ago`;
-      }
-      
-      // Otherwise show date
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-      });
-    } catch (error) {
-      return 'N/A';
-    }
+    setTooltipPosition({ x: mouseX, y: mouseY });
   };
 
   const formatTimeAgo = (date) => {
@@ -321,8 +255,7 @@ export default function Settings() {
       default: 'solar:globe-bold-duotone'
     };
 
-    // Get device type from deviceInfo
-    let deviceType = 'desktop'; // default
+    let deviceType = 'desktop';
     const device = session.deviceInfo?.device?.toLowerCase() || '';
     
     if (device.includes('mobile') || device.includes('phone')) {
@@ -348,7 +281,6 @@ export default function Settings() {
       'Opera': 'Opera'
     };
 
-    // Extract browser name from user agent
     const browserName = Object.keys(browserMap).find(name => 
       browser.toLowerCase().includes(name.toLowerCase())
     );
@@ -356,8 +288,8 @@ export default function Settings() {
     return browserName ? browserMap[browserName] : browser;
   };
 
-  // Show loading state until component is mounted and session is checked
-  if (!mounted || status === 'loading') {
+  // Show loading state while session is checked
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50/30">
         <div className="text-center">
@@ -411,7 +343,7 @@ export default function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleLogoutAllSessions}
-                    disabled={revoking}
+                    disabled={loadingStates.revoke}
                     className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Icon icon="solar:logout-3-bold-duotone" className="w-4 h-4" />
@@ -420,7 +352,7 @@ export default function Settings() {
                 </div>
 
                 <div className="grid gap-4">
-                  {loadingSessions ? (
+                  {loadingStates.sessions ? (
                     <div className="space-y-4">
                       {[1, 2].map((n) => (
                         <div key={n} className="bg-gray-50 rounded-xl p-4 animate-pulse">
@@ -472,7 +404,7 @@ export default function Settings() {
                               setTooltipVisible(true);
                             }}
                             onMouseLeave={() => {
-                             
+                              
                               setTooltipVisible(false);
                             }}
                             onMouseMove={handleMouseMove}
@@ -534,7 +466,7 @@ export default function Settings() {
                                     </div>
                                   </div>
                                 </div>
-                                
+                                 
                                 {/* Elegant bottom border */}
                                 <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
                               </motion.div>
@@ -551,7 +483,7 @@ export default function Settings() {
                                   <div className="relative p-3 xs:p-4 bg-white rounded-lg shadow-sm">
                                     <div className="relative">
                                       <Icon 
-                                        icon={device.icon || (device.type === 'mobile' ? 'solar:smartphone-bold-duotone' : 'solar:desktop-bold-duotone')}
+                                        icon={device.icon || (device.type === 'mobile' ? 'solar:smartphone-bold-duotone' : 'solar:desktop-bold-duotone') }
                                         className={`w-7 h-7 xs:w-8 xs:h-8 text-${isActive ? 'indigo' : 'gray'}-600`}
                                       />
                                       {isActive && (
@@ -617,7 +549,7 @@ export default function Settings() {
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => handleEndSession(session._id)}
-                                    disabled={revoking}
+                                    disabled={loadingStates.revoke}
                                     className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
                                   >
                                     <Icon 
@@ -783,14 +715,14 @@ export default function Settings() {
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                     type="submit"
-                    disabled={loading}
+                    disabled={loadingStates.password}
                     className={`w-full flex items-center justify-center px-6 py-3 rounded-xl text-white font-medium transition-all
-                      ${loading 
+                      ${loadingStates.password 
                         ? 'bg-gray-400 cursor-not-allowed' 
                         : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-500/25'
                       }`}
                   >
-                    {loading ? (
+                    {loadingStates.password ? (
                       <div className="flex items-center space-x-2">
                         <Icon icon="solar:spinner-bold-duotone" className="w-5 h-5 animate-spin" />
                         <span>Changing Password...</span>
