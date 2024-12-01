@@ -165,10 +165,22 @@ export default function LoginModal({ isOpen, onClose }) {
     try {
       setLoading(true);
       setError('');
-      await signIn('google', { callbackUrl: '/dashboard' });
+      const result = await signIn('google', { 
+        callbackUrl: '/dashboard',
+        redirect: false 
+      });
+      
+      if (result?.error) {
+        setError(getFormattedError(result.error));
+        return;
+      }
+      
+      if (result?.url) {
+        router.push(result.url);
+      }
     } catch (error) {
       console.error('Google sign in error:', error);
-      setError('An error occurred with Google sign in.');
+      setError(getFormattedError('Server error'));
     } finally {
       setLoading(false);
     }
@@ -508,7 +520,7 @@ export default function LoginModal({ isOpen, onClose }) {
     try {
       setLoading(true);
       setError('');
-      
+
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

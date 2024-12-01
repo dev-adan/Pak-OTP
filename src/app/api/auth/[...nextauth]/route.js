@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/models/User';
 import Session from '@/models/Session';
@@ -21,6 +22,19 @@ const isSessionExpiringSoon = (session) => {
 
 export const authOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          isEmailVerified: profile.email_verified
+        }
+      }
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -67,23 +81,50 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
-      if (user) {
-        // Initial sign in
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.role = user.role;
-        token.tokenVersion = user.tokenVersion;
-        
-        // Get the latest session for this user
-        const session = await getLatestSession(user.id);
-        if (session) {
-          token.sessionId = session._id.toString();
-        }
-      }
+    async jwt({ token, user, account }) {
+      try {
+        if (user) {
+          // Find or create user in our database
+          await connectDB();
+          let dbUser = await User.findOne({ email: user.email });
+          
+          if (account?.provider === 'google') {
+            if (!dbUser) {
+              dbUser = await User.create({
+                name: user.name,
+                email: user.email,
+                googleId: user.id,
+                image: user.image,
+                isEmailVerified: true
+              });
+            } else if (!dbUser.googleId) {
+              dbUser.googleId = user.id;
+              dbUser.image = user.image;
+              dbUser.isEmailVerified = true;
+              await dbUser.save();
+            }
+          }
 
-      return token;
+          if (dbUser) {
+            token.id = dbUser._id.toString();
+            token.role = dbUser.role;
+            token.name = dbUser.name;
+            token.email = dbUser.email;
+            token.isEmailVerified = dbUser.isEmailVerified;
+            token.tokenVersion = dbUser.tokenVersion;
+            
+            // Get the latest session for this user
+            const session = await getLatestSession(dbUser._id.toString());
+            if (session) {
+              token.sessionId = session._id.toString();
+            }
+          }
+        }
+        return token;
+      } catch (error) {
+        logger.error(`JWT callback error: ${error.message}`);
+        return token;
+      }
     },
 
     async session({ session, token }) {
@@ -136,13 +177,18 @@ export const authOptions = {
           }
         }
 
+        const user = await User.findById(token.id);
+        if (!user) return null;
+
         const updatedSession = {
           ...session,
           user: {
             id: token.id,
-            email: token.email,
-            name: token.name,
-            role: token.role
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            image: user.image,
+            isEmailVerified: user.isEmailVerified
           },
           sessionId: token.sessionId,
           expiresAt: new Date(Date.now() + SESSION_HARD_EXPIRY).toISOString(),
@@ -151,12 +197,7 @@ export const authOptions = {
 
         return updatedSession;
       } catch (error) {
-        logger.error(`Session validation error`, {
-          error: error.message,
-          stack: error.stack,
-          tokenId: token?.id,
-          timestamp: new Date().toISOString()
-        });
+        logger.error('Session callback error:', error);
         return {
           expires: new Date(0).toISOString(),
           user: null,
@@ -165,8 +206,10 @@ export const authOptions = {
       }
     },
 
-    async signIn({ user, request }) {
+    async signIn({ user, account, profile }) {
       try {
+        await connectDB();
+        
         const headersList = await headers();
         const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0] || 
                          headersList.get('x-real-ip') || 
@@ -179,7 +222,22 @@ export const authOptions = {
           device: parser.getDevice().type || 'desktop'
         };
 
-        // Create a new session
+        let dbUser;
+        if (account?.provider === 'google') {
+          dbUser = await User.findOne({ email: user.email });
+          if (!dbUser) {
+            dbUser = await User.create({
+              name: user.name,
+              email: user.email,
+              googleId: user.id,
+              image: user.image,
+              isEmailVerified: true
+            });
+          }
+          user.id = dbUser._id.toString(); // Set the correct user ID
+        }
+
+        // Create session with the correct user ID
         const session = await createSession(user.id, deviceInfo, ipAddress);
         if (!session) {
           logger.error('Failed to create session during sign in');
@@ -192,7 +250,7 @@ export const authOptions = {
         logger.error(`Error in signIn event: ${error.message}`);
         return false;
       }
-    }
+    },
   },
   events: {
     async signOut({ token }) {

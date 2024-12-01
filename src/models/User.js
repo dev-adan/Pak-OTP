@@ -13,8 +13,16 @@ const userSchema = new mongoose.Schema({
   },
   hashedPassword: {
     type: String,
-    required: true
+    required: function() {
+      return !this.googleId; // Password only required if not using Google
+    }
   },
+  googleId: {
+    type: String,
+    sparse: true,
+    unique: true
+  },
+  image: String,
   isEmailVerified: {
     type: Boolean,
     default: false
