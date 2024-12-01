@@ -23,6 +23,10 @@ const sessionSchema = new mongoose.Schema({
   tokenTimestamp: {
     type: Date,
     default: Date.now
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -31,4 +35,5 @@ sessionSchema.index({ userId: 1, isActive: 1, tokenTimestamp: 1 });
 
 const Session = mongoose.models.Session || mongoose.model('Session', sessionSchema);
 
+export { Session };
 export default Session;
