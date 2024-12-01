@@ -12,7 +12,7 @@ import ContactUs from '@/components/sections/ContactUs';
 import LoginModal from '@/components/auth/LoginModal';
 import LoginHandler from '@/components/auth/LoginHandler';
 
-export default function Home() {
+function HomeContent() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
@@ -22,10 +22,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Suspense fallback={null}>
-        <LoginHandler />
-      </Suspense>
-
+      <LoginHandler />
       <Navbar onLoginClick={() => window.dispatchEvent(new CustomEvent('openLoginModal'))} />
       
       {/* Main content with scroll animations */}
@@ -86,5 +83,13 @@ export default function Home() {
         onClose={() => setIsLoginModalOpen(false)}
       />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   );
 }
