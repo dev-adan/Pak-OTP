@@ -56,15 +56,21 @@ export default function Settings() {
           const data = await res.json();
           
           if (data.sessions) {
-            const sessionsWithDeviceInfo = data.sessions.map(dbSession => ({
-              ...dbSession,
-              isCurrentDevice: dbSession._id === session.token?.sessionId,
-              deviceInfo: dbSession.deviceInfo || {
-                browser: 'Unknown Browser',
-                os: 'Unknown OS',
-                device: 'Unknown Device'
-              }
-            }));
+            console.log('Session from next-auth:', session);
+            console.log('Session token:', session.token);
+            
+            const sessionsWithDeviceInfo = data.sessions.map(dbSession => {
+              console.log('Processing session:', dbSession);
+              return {
+                ...dbSession,
+                isCurrentSession: dbSession._id === session.sessionId,
+                deviceInfo: dbSession.deviceInfo || {
+                  browser: 'Unknown Browser',
+                  os: 'Unknown OS',
+                  device: 'Unknown Device'
+                }
+              };
+            });
             setSessions(sessionsWithDeviceInfo);
           }
         } catch (error) {
@@ -507,7 +513,7 @@ export default function Settings() {
                                     <h3 className="font-medium text-gray-900">
                                       {device.name || session.deviceInfo?.os || 'Unknown Device'}
                                     </h3>
-                                    {session.isCurrentDevice && (
+                                    {session.isCurrentSession && (
                                       <motion.span 
                                         initial={{ opacity: 0, scale: 0.8 }}
                                         animate={{ opacity: 1, scale: 1 }}
@@ -544,7 +550,7 @@ export default function Settings() {
                               </div>
 
                               <div className="flex items-center space-x-1.5">
-                                {!session.isCurrentDevice && (
+                                {!session.isCurrentSession && (
                                   <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
