@@ -7,6 +7,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import ChangePasswordForm from '@/components/settings/ChangePasswordForm';
+import LogoutConfirmModal from '@/components/settings/LogoutConfirmModal';
 
 export default function Settings() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function Settings() {
   const [sessions, setSessions] = useState([]);
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   // Password validation states
   const passwordValidation = useMemo(() => {
@@ -47,6 +49,8 @@ export default function Settings() {
   }, [formData.newPassword, formData.confirmPassword]);
 
   const isPasswordValid = Object.values(passwordValidation).every(Boolean);
+
+  const otherSessionsCount = sessions.filter(s => !s.isCurrentSession).length;
 
   // Fetch sessions when component mounts and session is available
   useEffect(() => {
@@ -165,27 +169,49 @@ export default function Settings() {
   const handleLogoutAllSessions = async () => {
     try {
       setLoadingStates(prev => ({ ...prev, revoke: true }));
-      addLog('Revoking all sessions...', 'info');
+      addLog('Revoking all other sessions...', 'info');
 
-      const res = await fetch('/api/auth/sessions', {
-        method: 'DELETE',
+      const res = await fetch('/api/auth/sessions/end-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          currentSessionId: session.sessionId 
+        })
       });
 
+      const data = await res.json();
+      
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to revoke all sessions');
+        throw new Error(data.error || 'Failed to revoke other sessions');
       }
 
-      // Sign out from current session
-      signOut({ callbackUrl: '/' });
+      setIsLogoutModalOpen(false);
+
+      // Refresh the sessions list
+      const sessionsRes = await fetch('/api/auth/sessions');
+      const sessionsData = await sessionsRes.json();
       
-      toast.success('All sessions revoked successfully');
-      addLog('✅ All sessions revoked successfully', 'success');
+      if (sessionsData.sessions) {
+        const sessionsWithDeviceInfo = sessionsData.sessions.map(dbSession => ({
+          ...dbSession,
+          isCurrentSession: dbSession._id === session.sessionId,
+          deviceInfo: dbSession.deviceInfo || {
+            browser: 'Unknown Browser',
+            os: 'Unknown OS',
+            device: 'Unknown Device'
+          }
+        }));
+        setSessions(sessionsWithDeviceInfo);
+      }
+      
+      toast.success(`All other sessions revoked successfully`);
+      addLog(`✅ Successfully ended ${data.sessionsEnded} other sessions`, 'success');
     } catch (error) {
       toast.error(error.message);
       addLog(`❌ Error: ${error.message}`, 'error');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, revoke: false }));
     }
-    // No finally block needed since we're redirecting
   };
 
   const handleEndSession = async (sessionId) => {
@@ -349,8 +375,8 @@ export default function Settings() {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={handleLogoutAllSessions}
-                    disabled={loadingStates.revoke}
+                    onClick={() => otherSessionsCount > 0 && setIsLogoutModalOpen(true)}
+                    disabled={otherSessionsCount === 0 || loadingStates.revoke}
                     className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
                   >
                     <Icon icon="solar:logout-3-bold-duotone" className="w-4 h-4" />
@@ -700,6 +726,14 @@ export default function Settings() {
           </motion.div>
         </div>
       </div>
+      {/* Confirmation Modal */}
+      <LogoutConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleLogoutAllSessions}
+        sessionsCount={otherSessionsCount}
+        isLoading={loadingStates.revoke}
+      />
     </div>
   );
 }
