@@ -1,8 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { validateEmail } from '@/utils/emailValidation';
+import { validateMessage } from '@/utils/messageValidation';
+import EmailInput from '@/components/common/EmailInput';
+import AIValidationIndicator from '@/components/common/AIValidationIndicator';
+
+const correctDomainTypo = (typo) => {
+  const corrections = {
+    'gmial': 'gmail',
+    'gmal': 'gmail',
+    'gmil': 'gmail',
+    'gmai': 'gmail',
+    'yaho': 'yahoo',
+    'yahooo': 'yahoo',
+    'hotmal': 'hotmail',
+    'hotmai': 'hotmail',
+    'outloo': 'outlook',
+    'outlok': 'outlook'
+  };
+  return corrections[typo] || typo;
+};
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({
@@ -14,6 +34,10 @@ export default function ContactUs() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [emailValidation, setEmailValidation] = useState({ isValid: true, error: null });
+  const [messageValidation, setMessageValidation] = useState({ isValid: true, error: null });
+  const [isValidatingMessage, setIsValidatingMessage] = useState(false);
+  const messageValidationTimeout = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,8 +45,20 @@ export default function ContactUs() {
     setError('');
     
     try {
+      // Validate required fields
       if (!formData.name || !formData.email || !formData.message) {
         throw new Error('Please fill in all required fields');
+      }
+
+      // Check email validation
+      if (!emailValidation.isValid) {
+        throw new Error(emailValidation.error);
+      }
+
+      // Check message validation
+      const messageCheck = validateMessage(formData.message);
+      if (!messageCheck.isValid) {
+        throw new Error(messageCheck.error);
       }
 
       const response = await fetch('/api/contact', {
@@ -56,8 +92,44 @@ export default function ContactUs() {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Validate message on change with debounce
+    if (name === 'message') {
+      // Reset validation if empty
+      if (!value.trim()) {
+        setMessageValidation({ isValid: true, error: null });
+        setIsValidatingMessage(false);
+        if (messageValidationTimeout.current) {
+          clearTimeout(messageValidationTimeout.current);
+        }
+        return;
+      }
+
+      setIsValidatingMessage(true);
+      
+      // Clear previous timeout
+      if (messageValidationTimeout.current) {
+        clearTimeout(messageValidationTimeout.current);
+      }
+
+      // Set new timeout for validation
+      messageValidationTimeout.current = setTimeout(() => {
+        const validation = validateMessage(value);
+        setMessageValidation(validation);
+        setIsValidatingMessage(false);
+      }, 500);
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      if (messageValidationTimeout.current) {
+        clearTimeout(messageValidationTimeout.current);
+      }
+    };
+  }, []);
 
   const contactInfo = [
     {
@@ -245,15 +317,11 @@ export default function ContactUs() {
                     <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700 mb-1">
                       Email Address
                     </label>
-                    <input
-                      type="email"
-                      id="contact-email"
-                      name="email"
+                    <EmailInput
                       value={formData.email}
-                      onChange={handleChange}
-                      required
-                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500"
-                      placeholder="ali@example.com"
+                      onChange={(value) => setFormData(prev => ({ ...prev, email: value }))}
+                      onValidation={setEmailValidation}
+                      placeholder="Enter your email address"
                     />
                   </div>
                   <div>
@@ -281,23 +349,34 @@ export default function ContactUs() {
                       Message
                     </label>
                     <textarea
-                      name="message"
                       id="message"
-                      rows="4"
+                      name="message"
+                      rows={4}
                       value={formData.message}
                       onChange={handleChange}
+                      className={`w-full px-4 py-2.5 rounded-lg transition-all duration-200
+                        ${messageValidation.error && formData.message.trim().length > 0
+                          ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' 
+                          : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white'
+                        }
+                        text-gray-900`}
+                      placeholder="How can we help you?"
                       required
-                      className="block w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-500 resize-none"
-                      placeholder="Your message..."
+                    />
+                    <AIValidationIndicator
+                      isValidating={isValidatingMessage}
+                      isValid={messageValidation.isValid && formData.message.length >= 10}
+                      error={messageValidation.error}
+                      showIndicator={formData.message.length > 0}
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !emailValidation.isValid || !messageValidation.isValid}
                   className={`w-full py-3 px-6 text-white rounded-lg font-medium transition-all duration-200 ${
-                    isSubmitting
+                    isSubmitting || !emailValidation.isValid || !messageValidation.isValid
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700'
                   }`}

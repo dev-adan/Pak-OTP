@@ -3,9 +3,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@iconify/react';
 import { useState, useRef, useEffect } from 'react';
+import { validateEmail } from '@/utils/emailValidation';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast'; // Import toast
+import EmailInput from '@/components/common/EmailInput';
 
 export default function LoginModal({ isOpen, onClose }) {
   const router = useRouter();
@@ -21,6 +23,9 @@ export default function LoginModal({ isOpen, onClose }) {
   const [showNewPasswordFields, setShowNewPasswordFields] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({
     email: false,
     password: false,
@@ -31,6 +36,7 @@ export default function LoginModal({ isOpen, onClose }) {
     email: '',
     password: '',
   });
+  const [emailValidation, setEmailValidation] = useState({ isValid: true, error: null });
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const otpInputRefs = Array(6).fill(0).map(() => useRef(null));
   const [resendTimer, setResendTimer] = useState(0);
@@ -223,9 +229,9 @@ export default function LoginModal({ isOpen, onClose }) {
         newFieldErrors.email = true;
         setError(getFormattedError('Email required'));
         hasError = true;
-      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      } else if (!emailValidation.isValid) {
         newFieldErrors.email = true;
-        setError(getFormattedError('Invalid email format'));
+        setError(getFormattedError(emailValidation.error));
         hasError = true;
       }
 
@@ -905,28 +911,52 @@ export default function LoginModal({ isOpen, onClose }) {
             <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
               New Password
             </label>
-            <input
-              id="new-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
-              placeholder="Enter new password"
-            />
+            <div className="relative">
+              <input
+                id="new-password"
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 pr-12"
+                placeholder="Enter new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+              >
+                <Icon 
+                  icon={showNewPassword ? "solar:eye-closed-linear" : "solar:eye-linear"} 
+                  className="w-5 h-5"
+                />
+              </button>
+            </div>
           </div>
 
           <div>
             <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
               Confirm Password
             </label>
-            <input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
-              placeholder="Confirm new password"
-            />
+            <div className="relative">
+              <input
+                id="confirm-password"
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 pr-12"
+                placeholder="Confirm new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+              >
+                <Icon 
+                  icon={showConfirmPassword ? "solar:eye-closed-linear" : "solar:eye-linear"} 
+                  className="w-5 h-5"
+                />
+              </button>
+            </div>
           </div>
 
           {passwordError && (
@@ -1249,17 +1279,12 @@ export default function LoginModal({ isOpen, onClose }) {
                         <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
                           Email Address
                         </label>
-                        <input
-                          type="email"
-                          id="login-email"
-                          name="email"
+                        <EmailInput
                           value={formData.email}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                            ${fieldErrors.email ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
-                            outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                          onChange={(value) => setFormData(prev => ({ ...prev, email: value }))}
+                          onValidation={setEmailValidation}
                           placeholder="Enter your email"
-                          required
+                          validateOnChange={false}
                         />
                       </div>
 
@@ -1267,18 +1292,30 @@ export default function LoginModal({ isOpen, onClose }) {
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                           Password
                         </label>
-                        <input
-                          type="password"
-                          id="password"
-                          name="password"
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200
-                            ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
-                            outline-none shadow-sm text-gray-900 placeholder-gray-400`}
-                          placeholder={isLogin ? "Enter your password" : "Create a password"}
-                          required
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            className={`w-full px-4 py-3 sm:py-2.5 text-base sm:text-sm rounded-lg transition-all duration-200 pr-12
+                              ${fieldErrors.password ? 'border-2 border-red-500 bg-white focus:ring-2 focus:ring-red-200' : 'border border-gray-200 bg-gray-50 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:bg-white text-gray-900'}
+                              outline-none shadow-sm text-gray-900 placeholder-gray-400`}
+                            placeholder={isLogin ? "Enter your password" : "Create a password"}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                          >
+                            <Icon 
+                              icon={showPassword ? "solar:eye-closed-linear" : "solar:eye-linear"} 
+                              className="w-5 h-5"
+                            />
+                          </button>
+                        </div>
                       </div>
 
                       {isLogin && (
