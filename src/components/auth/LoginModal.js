@@ -227,27 +227,27 @@ export default function LoginModal({ isOpen, onClose }) {
 
       if (!formData.email) {
         newFieldErrors.email = true;
-        setError(getFormattedError('Email required'));
+        setError('Please enter your email address to continue');
         hasError = true;
       } else if (!emailValidation.isValid) {
         newFieldErrors.email = true;
-        setError(getFormattedError(emailValidation.error));
+        setError(emailValidation.error);
         hasError = true;
       }
 
       if (!formData.password) {
         newFieldErrors.password = true;
-        setError(getFormattedError('Password required'));
+        setError('Please enter your password to continue');
         hasError = true;
       } else if (formData.password.length < 6) {
         newFieldErrors.password = true;
-        setError(getFormattedError('Password too short'));
+        setError('Your password should be at least 6 characters long');
         hasError = true;
       }
 
       if (!isLogin && !formData.name) {
         newFieldErrors.name = true;
-        setError(getFormattedError('Name required'));
+        setError('Please enter your name so we know what to call you');
         hasError = true;
       }
 
@@ -274,17 +274,18 @@ export default function LoginModal({ isOpen, onClose }) {
         if (result?.error) {
           if (result.error.includes('No user found')) {
             setFieldErrors(prev => ({ ...prev, email: true }));
-            const errorMsg = 'No account found with this email. Would you like to sign up instead?';
-            setError(getFormattedError('Email not found'));
+            const errorMsg = 'We couldn\'t find an account with this email. Would you like to sign up instead?';
+            setError(errorMsg);
             toast.error(errorMsg);
           } else if (result.error.includes('Invalid password')) {
             setFieldErrors(prev => ({ ...prev, password: true }));
-            const errorMsg = 'Incorrect password. Please try again.';
-            setError(getFormattedError('Invalid password'));
+            const errorMsg = 'The password doesn\'t match our records. Please try again or reset your password.';
+            setError(errorMsg);
             toast.error(errorMsg);
           } else {
-            setError(getFormattedError(result.error || 'Login failed. Please try again.'));
-            toast.error(result.error || 'Login failed. Please try again.');
+            const errorMsg = 'Sorry, we couldn\'t log you in. Please try again.';
+            setError(errorMsg);
+            toast.error(errorMsg);
           }
           setLoading(false);
           return;
@@ -486,13 +487,18 @@ export default function LoginModal({ isOpen, onClose }) {
     e.preventDefault();
     setPasswordError('');
 
+    if (!newPassword) {
+      setPasswordError('Please enter your new password');
+      return;
+    }
+
     if (newPassword.length < 8) {
-      setPasswordError(getFormattedError('Password too short'));
+      setPasswordError('Your password should be at least 8 characters long for better security');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError(getFormattedError('Passwords do not match'));
+      setPasswordError('The passwords don\'t match. Please make sure they\'re the same');
       return;
     }
 
@@ -680,19 +686,19 @@ export default function LoginModal({ isOpen, onClose }) {
       setPasswordError('');
 
       if (!newPassword) {
-        setPasswordError(getFormattedError('Password required'));
+        setPasswordError('Please enter your new password');
         setLoading(false);
         return;
       }
 
       if (newPassword.length < 8) {
-        setPasswordError(getFormattedError('Password too short'));
+        setPasswordError('Your password should be at least 8 characters long for better security');
         setLoading(false);
         return;
       }
 
       if (newPassword !== confirmPassword) {
-        setPasswordError(getFormattedError('Passwords do not match'));
+        setPasswordError('The passwords don\'t match. Please make sure they\'re the same');
         setLoading(false);
         return;
       }

@@ -57,7 +57,7 @@ const commonTldTypos = {
 export const validateEmail = (email) => {
   // Basic checks
   if (!email || typeof email !== 'string') {
-    return { isValid: false, error: 'Email is required' };
+    return { isValid: false, error: 'Please enter your email address so we can get back to you' };
   }
 
   // Remove leading/trailing whitespace
@@ -65,23 +65,23 @@ export const validateEmail = (email) => {
 
   // Check length
   if (email.length > 254) { // Maximum length for email addresses
-    return { isValid: false, error: 'Email is too long' };
+    return { isValid: false, error: 'This email seems unusually long. Could you double-check it?' };
   }
 
   if (email.length < 5) { // Minimum reasonable length (a@b.c)
-    return { isValid: false, error: 'Email is too short' };
+    return { isValid: false, error: 'This email seems too short. Please enter your full email address' };
   }
 
   // Basic format check using regex
   const basicFormatRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!basicFormatRegex.test(email)) {
-    return { isValid: false, error: 'Invalid email format' };
+    return { isValid: false, error: 'Your email should look like "name@example.com"' };
   }
 
   // More detailed format validation
   const detailedFormatRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   if (!detailedFormatRegex.test(email)) {
-    return { isValid: false, error: 'Email contains invalid characters' };
+    return { isValid: false, error: 'Some characters in your email address don\'t look right' };
   }
 
   // Split email into local and domain parts
@@ -89,7 +89,7 @@ export const validateEmail = (email) => {
 
   // Check local part length
   if (localPart.length > 64) {
-    return { isValid: false, error: 'Local part of email is too long' };
+    return { isValid: false, error: 'The part before @ is too long. Could you check it?' };
   }
 
   // Check domain part
@@ -97,88 +97,57 @@ export const validateEmail = (email) => {
   
   // Domain must have at least two parts and a valid TLD
   if (domainParts.length < 2) {
-    return { isValid: false, error: 'Invalid domain format' };
+    return { isValid: false, error: 'Your email domain should have a proper ending (like .com)' };
   }
 
-  // Get domain without TLD and TLD
-  const domainWithoutTld = domainParts[domainParts.length - 2];
   const tld = domainParts[domainParts.length - 1];
-
-  // Check if TLD is too short or too long
-  if (tld.length < 2 || tld.length > 63) {
-    return { isValid: false, error: 'Invalid top-level domain' };
-  }
-
-  // Check for TLD typos first
-  if (commonTldTypos[tld]) {
-    return { 
-      isValid: false, 
-      error: `Invalid top-level domain. Did you mean .${commonTldTypos[tld]}?` 
-    };
-  }
-
-  // If no common typo found, check if TLD is valid
+  
+  // Check for common TLD typos and suggest corrections
   if (!validTLDs.includes(tld)) {
-    const suggestedTld = validTLDs.find(validTld => 
-      validTld.length === tld.length && 
-      levenshteinDistance(validTld, tld) <= 1
-    );
-    return { 
-      isValid: false, 
-      error: suggestedTld 
-        ? `Invalid top-level domain. Did you mean .${suggestedTld}?`
-        : 'Invalid top-level domain'
-    };
-  }
-
-  // Check for numeric characters in domain
-  if (/\d/.test(domainWithoutTld)) {
-    // Check if it's a common email provider
-    const baseProvider = domainWithoutTld.replace(/\d+/g, '');
-    if (validEmailProviders.includes(baseProvider)) {
+    const typoCorrection = commonTldTypos[tld];
+    if (typoCorrection) {
       return { 
         isValid: false, 
-        error: `Invalid email provider. Did you mean ${baseProvider}.${tld}?` 
+        error: `Did you mean to type "${email.replace(tld, typoCorrection)}"?` 
       };
     }
-    return { 
-      isValid: false, 
-      error: 'Email provider cannot contain numbers' 
-    };
-  }
-
-  // Check for common domain typos first
-  if (commonDomainTypos[domainWithoutTld]) {
-    return { 
-      isValid: false, 
-      error: `Did you mean ${commonDomainTypos[domainWithoutTld]}.${tld}?` 
-    };
-  }
-
-  // If no common typo found, check if it's a valid email provider
-  if (!validEmailProviders.includes(domainWithoutTld)) {
-    // Find closest match
-    const suggestedProvider = validEmailProviders.find(provider => 
-      levenshteinDistance(provider, domainWithoutTld) <= 2
-    );
-    if (suggestedProvider) {
+    
+    // Find closest matching TLD
+    let closestMatch = '';
+    let minDistance = Infinity;
+    for (const validTld of validTLDs) {
+      const distance = levenshteinDistance(tld, validTld);
+      if (distance < minDistance && distance <= 2) {
+        minDistance = distance;
+        closestMatch = validTld;
+      }
+    }
+    
+    if (closestMatch) {
       return { 
         isValid: false, 
-        error: `Unknown email provider. Did you mean ${suggestedProvider}.${tld}?` 
+        error: `Did you mean to use "${email.replace(tld, closestMatch)}"?` 
       };
     }
-    return {
-      isValid: false,
-      error: 'Unknown email provider'
+    
+    return { 
+      isValid: false, 
+      error: 'The email ending doesn\'t look right. Common ones are .com, .net, or .org' 
     };
   }
 
-  // Check for consecutive dots
-  if (email.includes('..')) {
-    return { isValid: false, error: 'Email cannot contain consecutive dots' };
+  // Check for common domain typos
+  const domainWithoutTld = domainParts[domainParts.length - 2];
+  const typoCorrection = commonDomainTypos[domainWithoutTld];
+  if (typoCorrection) {
+    const correctedEmail = email.replace(domainWithoutTld, typoCorrection);
+    return { 
+      isValid: false, 
+      error: `Did you mean "${correctedEmail}"?` 
+    };
   }
 
-  return { isValid: true, error: null };
+  return { isValid: true };
 };
 
 // Helper function to calculate Levenshtein distance for suggesting similar TLDs
