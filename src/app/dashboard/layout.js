@@ -57,7 +57,7 @@ function DashboardContent({ children }) {
     return <LoadingSpinner />;
   }
 
-  const sidebarWidth = isSidebarOpen ? '280px' : '80px';
+  const sidebarWidth = isSidebarOpen ? (isMobileView ? '100%' : '280px') : '80px';
   const sidebarStyle = {
     width: sidebarWidth,
     transform: isMobileView && !isSidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
@@ -109,15 +109,15 @@ function DashboardContent({ children }) {
           {/* Sidebar */}
           <aside 
             style={sidebarStyle}
-            className={`hidden md:flex md:flex-col md:w-64 bg-white shadow-sm ${
-              isMobileView && !isSidebarOpen ? 'pointer-events-none opacity-0' : ''
+            className={`fixed md:relative flex flex-col w-full md:w-64 bg-white shadow-lg md:shadow-sm transform transition-all duration-300 ease-in-out h-[calc(100vh-4rem)] md:h-screen ${
+              isMobileView ? 'z-40 top-16' : ''
             }`}
           >
             <div className="flex flex-col h-full">
               {/* Logo Section */}
               <div className="h-16 flex items-center justify-between px-4">
-                <div className="flex items-center">
-                  <Logo showText={isSidebarOpen || isMobileView} />
+                <div className={`flex items-center ${isMobileView && !isSidebarOpen ? 'opacity-0' : ''}`}>
+                  <Logo showText={isSidebarOpen} />
                 </div>
                 {!isMobileView && (
                   <button
@@ -141,6 +141,7 @@ function DashboardContent({ children }) {
                     <Link
                       key={item.name}
                       href={item.path}
+                      onClick={() => isMobileView && setIsSidebarOpen(false)}
                       className={`flex items-center ${!isSidebarOpen && !isMobileView ? 'justify-center px-2' : 'px-3'} py-3 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-indigo-50 text-indigo-600'

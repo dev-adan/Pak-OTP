@@ -6,6 +6,7 @@ import { Icon } from '@iconify/react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import ChangePasswordForm from '@/components/settings/ChangePasswordForm';
 
 export default function Settings() {
   const router = useRouter();
@@ -314,7 +315,7 @@ export default function Settings() {
 
   // If we get here, we know we're authenticated because of { required: true }
   return (
-    <div className="min-h-screen bg-gray-50/30 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-50/30 p-4 mt-16 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -629,117 +630,14 @@ export default function Settings() {
             </motion.div>
 
             {/* Password Change Section */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
-            >
-              <div className="p-4 md:p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-50 rounded-xl">
-                      <Icon icon="solar:lock-password-bold-duotone" className="w-6 h-6 text-indigo-600" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
-                      <p className="text-sm text-gray-500">Update your password to keep your account secure</p>
-                    </div>
-                  </div>
-                </div>
-
-                <form onSubmit={handlePasswordChange} className="space-y-4">
-                  <div>
-                    <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                      Current Password
-                    </label>
-                    <input
-                      type="password"
-                      id="currentPassword"
-                      name="currentPassword"
-                      value={formData.currentPassword}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                      placeholder="Enter your current password"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      id="newPassword"
-                      name="newPassword"
-                      value={formData.newPassword}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                      placeholder="Enter your new password"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                      Confirm New Password
-                    </label>
-                    <input
-                      type="password"
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                      placeholder="Confirm your new password"
-                    />
-                  </div>
-
-                  {/* Password Requirements */}
-                  <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Password Requirements</h3>
-                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
-                      {Object.entries(passwordValidation).map(([key, isValid]) => (
-                        <div key={key} className="flex items-center space-x-2">
-                          <Icon 
-                            icon={isValid ? "solar:check-circle-bold-duotone" : "solar:close-circle-bold-duotone"} 
-                            className={`w-5 h-5 ${isValid ? 'text-green-500' : 'text-gray-300'}`}
-                          />
-                          <span className={`text-sm ${isValid ? 'text-gray-700' : 'text-gray-500'}`}>
-                            {key === 'minLength' && '8+ characters'}
-                            {key === 'hasUppercase' && 'Uppercase letter'}
-                            {key === 'hasLowercase' && 'Lowercase letter'}
-                            {key === 'hasNumber' && 'Number'}
-                            {key === 'hasSpecialChar' && 'Special character'}
-                            {key === 'matchesConfirm' && 'Passwords match'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <motion.button
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    type="submit"
-                    disabled={loadingStates.password}
-                    className={`w-full flex items-center justify-center px-6 py-3 rounded-xl text-white font-medium transition-all
-                      ${loadingStates.password 
-                        ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-500/25'
-                      }`}
-                  >
-                    {loadingStates.password ? (
-                      <div className="flex items-center space-x-2">
-                        <Icon icon="solar:spinner-bold-duotone" className="w-5 h-5 animate-spin" />
-                        <span>Changing Password...</span>
-                      </div>
-                    ) : (
-                      'Update Password'
-                    )}
-                  </motion.button>
-                </form>
-              </div>
-            </motion.div>
+            <ChangePasswordForm 
+              formData={formData}
+              handleInputChange={handleInputChange}
+              handlePasswordChange={handlePasswordChange}
+              passwordValidation={passwordValidation}
+              isPasswordValid={isPasswordValid}
+              loadingStates={loadingStates}
+            />
           </div>
 
           {/* Activity Log - Right Side */}
