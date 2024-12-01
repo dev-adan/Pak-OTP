@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Icon } from '@iconify/react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -34,12 +34,12 @@ export default function Settings() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    console.log('Tooltip state:', {
-      visible: tooltipVisible,
-      position: tooltipPosition
-    });
-  }, [tooltipVisible, tooltipPosition]);
+  // useEffect(() => {
+  //   console.log('Tooltip state:', {
+  //     visible: tooltipVisible,
+  //     position: tooltipPosition
+  //   });
+  // }, [tooltipVisible, tooltipPosition]);
 
   // Password validation states
   const passwordValidation = useMemo(() => {
@@ -59,25 +59,36 @@ export default function Settings() {
   // Fetch sessions when component mounts and session is available
   useEffect(() => {
     if (session) {
+      console.log('🔍 Current session data:', {
+        session,
+        token: session?.token,
+        sessionId: session?.sessionId,
+        user: session?.user
+      });
+
       const fetchSessions = async () => {
         setLoadingSessions(true);
         try {
           const res = await fetch('/api/auth/sessions');
           const data = await res.json();
+          console.log('📥 Fetched sessions:', data);
+          
           if (data.sessions) {
-            // Use sessionId directly from the NextAuth session object
+            // Use sessionId from the token
             const sessionsWithDeviceInfo = data.sessions.map(dbSession => ({
               ...dbSession,
-              isCurrentDevice: dbSession._id === session.sessionId,
+              isCurrentDevice: dbSession._id === session.token?.sessionId, // Use token.sessionId
               deviceInfo: dbSession.deviceInfo || {
                 browser: 'Unknown Browser',
                 os: 'Unknown OS',
                 device: 'Unknown Device'
               }
             }));
+            console.log('🔄 Processed sessions:', sessionsWithDeviceInfo);
             setSessions(sessionsWithDeviceInfo);
           }
         } catch (error) {
+          console.error('❌ Session fetch error:', error);
           toast.error('Failed to fetch sessions');
           addLog('Failed to fetch active sessions', 'error');
         } finally {
@@ -165,31 +176,6 @@ export default function Settings() {
     }
   };
 
-  const handleLogoutSession = async (sessionId) => {
-    try {
-      setRevoking(true);
-      addLog('Ending session...', 'info');
-
-      const response = await fetch('/api/auth/sessions', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ sessionId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to end session');
-      }
-
-      setSessions(prevSessions => prevSessions.filter(s => s._id !== sessionId));
-    } catch (error) {
-      toast.error('Failed to end session. Please try again.');
-    } finally {
-      setRevoking(false);
-    }
-  };
-
   const handleLogoutAllSessions = async () => {
     try {
       setRevoking(true);
@@ -217,10 +203,47 @@ export default function Settings() {
     }
   };
 
+  const handleEndSession = async (sessionId) => {
+    if (!sessionId) {
+      toast.error('Invalid session');
+      return;
+    }
+
+    try {
+      setRevoking(true);
+      addLog('Ending session...', 'info');
+
+      const response = await fetch('/api/auth/sessions/end-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to end session');
+      }
+
+      // Update UI by removing the ended session
+      setSessions(prevSessions => prevSessions.filter(s => s._id !== sessionId));
+      toast.success('Session ended successfully');
+      addLog('Session ended successfully', 'success');
+    } catch (error) {
+      console.error('Session end error:', error);
+      toast.error(error.message || 'Failed to end session. Please try again.');
+      addLog('Failed to end session', 'error');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
   const handleMouseMove = (e) => {
     const mouseX = e.clientX;
     const mouseY = e.clientY;
-    console.log('Mouse position:', { x: mouseX, y: mouseY });
+    
     setTooltipPosition({
       x: mouseX,
       y: mouseY
@@ -445,11 +468,11 @@ export default function Settings() {
                             transition={{ delay: index * 0.1 }}
                             className="relative group"
                             onMouseEnter={() => {
-                              console.log('Mouse entered session card');
+                              
                               setTooltipVisible(true);
                             }}
                             onMouseLeave={() => {
-                              console.log('Mouse left session card');
+                             
                               setTooltipVisible(false);
                             }}
                             onMouseMove={handleMouseMove}
@@ -593,7 +616,7 @@ export default function Settings() {
                                   <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleLogoutSession(session._id)}
+                                    onClick={() => handleEndSession(session._id)}
                                     disabled={revoking}
                                     className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
                                   >
