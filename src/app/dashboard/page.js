@@ -251,7 +251,7 @@ function DashboardContent() {
                 </h2>
                 <div className="mt-2">
                   <div className="text-gray-600 text-base">
-                    Track and manage your subscription plans efficiently
+                    View and manage your active subscription plans in one place
                   </div>
                   <div className="h-1 w-32 bg-gradient-to-r from-[#4F46E5]/20 via-[#6366F1]/20 to-transparent rounded-full mt-2"></div>
                 </div>
@@ -297,7 +297,7 @@ function DashboardContent() {
                 </h2>
                 <div className="mt-2">
                   <div className="text-gray-600 text-base">
-                    Track your recent transactions
+                    Monitor your payment history and billing details
                   </div>
                   <div className="h-1 w-32 bg-gradient-to-r from-[#4F46E5]/20 via-[#6366F1]/20 to-transparent rounded-full mt-2"></div>
                 </div>
