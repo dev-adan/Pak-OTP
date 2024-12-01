@@ -165,28 +165,31 @@ export const authOptions = {
       }
     },
 
-    async signIn({ user }) {
+    async signIn({ user, request }) {
       try {
         const headersList = await headers();
-        const userAgent = headersList.get('user-agent') || '';
-        const parser = new UAParser(userAgent);
-        
+        const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0] || 
+                         headersList.get('x-real-ip') || 
+                         'Unknown';
+                         
+        const parser = new UAParser(headersList.get('user-agent'));
         const deviceInfo = {
-          browser: parser.getBrowser().name || 'Unknown',
-          os: parser.getOS().name || 'Unknown',
+          browser: parser.getBrowser().name,
+          os: parser.getOS().name,
           device: parser.getDevice().type || 'desktop'
         };
 
-        // Create new session with token timestamp
-        const session = await createSession(user.id, deviceInfo);
+        // Create a new session
+        const session = await createSession(user.id, deviceInfo, ipAddress);
         if (!session) {
-          throw new Error('Failed to create session');
+          logger.error('Failed to create session during sign in');
+          return false;
         }
 
-        // Don't modify the user object directly
+        logger.info(`Session created successfully for user: ${user.email}`);
         return true;
       } catch (error) {
-        logger.error(`SignIn callback error: ${error.message}`);
+        logger.error(`Error in signIn event: ${error.message}`);
         return false;
       }
     }

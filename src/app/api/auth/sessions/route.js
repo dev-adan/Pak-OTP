@@ -27,19 +27,12 @@ export async function GET(req) {
     }).sort({ lastAccessed: -1 });
 
     // Mark current session
-    console.log('Current session from auth:', session);
-    console.log('Session ID from auth:', session.sessionId);
-    
     const currentSession = activeSessions.map(dbSession => {
       const isCurrentSession = dbSession._id.toString() === session.sessionId;
-      console.log('Comparing session IDs:', {
-        sessionId: dbSession._id.toString(),
-        currentSessionId: session.sessionId,
-        isMatch: isCurrentSession
-      });
       return {
         ...dbSession.toObject(),
-        isCurrentSession
+        isCurrentSession,
+        ipAddress: dbSession.ipAddress || 'Unknown'
       };
     });
 

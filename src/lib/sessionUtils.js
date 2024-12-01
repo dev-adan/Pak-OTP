@@ -209,11 +209,12 @@ export async function invalidateSession(sessionId, userId) {
 /**
  * Creates a new session with proper token timestamp
  */
-export async function createSession(userId, deviceInfo) {
+export async function createSession(userId, deviceInfo, ipAddress) {
   try {
     const session = await Session.create({
       userId,
       deviceInfo,
+      ipAddress,
       tokenTimestamp: new Date(),
       isActive: true
     });

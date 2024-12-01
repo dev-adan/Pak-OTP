@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function LoginHandler() {
+function LoginHandlerContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -28,4 +28,12 @@ export default function LoginHandler() {
   }, [searchParams]);
 
   return null;
+}
+
+export default function LoginHandler() {
+  return (
+    <Suspense fallback={null}>
+      <LoginHandlerContent />
+    </Suspense>
+  );
 }
