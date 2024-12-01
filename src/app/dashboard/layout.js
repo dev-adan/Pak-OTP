@@ -88,17 +88,22 @@ function DashboardContent({ children }) {
           />
         )}
 
-        {/* Mobile Toggle Button */}
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="lg:hidden fixed top-4 right-6 mr-2 z-50 p-2 rounded-lg bg-white shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-          aria-label="Toggle Sidebar"
-        >
-          <Icon 
-            icon={isSidebarOpen ? "solar:close-circle-bold-duotone" : "solar:menu-dots-bold-duotone"} 
-            className="w-5 h-5 text-gray-600"
-          />
-        </button>
+        {/* Mobile Header */}
+        <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 flex justify-between items-center px-4 z-50">
+          <div className="flex items-center">
+            <Logo showText={true} />
+          </div>
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 rounded-lg hover:bg-gray-50 transition-colors"
+            aria-label="Toggle Sidebar"
+          >
+            <Icon 
+              icon={isSidebarOpen ? "heroicons:x-mark-20-solid" : "heroicons:bars-3-center-left-20-solid"} 
+              className="w-6 h-6 text-gray-600"
+            />
+          </button>
+        </div>
 
         {/* Sidebar */}
         <div 
@@ -209,8 +214,9 @@ function DashboardContent({ children }) {
 
         {/* Main Content */}
         <main 
-          style={{ marginLeft: !isMobileView ? sidebarWidth : '0' }}
-          className="flex-1 transition-all duration-300"
+          className={`flex-1 transition-all duration-300 ${
+            !isMobileView ? (isSidebarOpen ? 'ml-[280px]' : 'ml-[80px]') : ''
+          } lg:mt-0 mt-16`}
         >
           {children}
         </main>
