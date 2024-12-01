@@ -1,14 +1,14 @@
-import { Suspense } from 'react';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import Providers from '@/app/providers';
+import Providers from './providers';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Pak OTP - Secure Authentication Service',
-  description: 'Enterprise-grade OTP authentication service for businesses',
+  title: 'Your App Name',
+  description: 'Your app description',
 };
 
 export default function RootLayout({ children }) {
@@ -16,7 +16,9 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
           <Toaster position="bottom-right" />
         </Providers>
       </body>

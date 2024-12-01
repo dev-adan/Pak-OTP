@@ -31,8 +31,15 @@ const sessionSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  tokenTimestamp: {
+    type: Date,
+    default: Date.now
   }
 });
+
+// Index for faster token validation queries
+sessionSchema.index({ userId: 1, isActive: 1, tokenTimestamp: 1 });
 
 const Session = mongoose.models.Session || mongoose.model('Session', sessionSchema);
 

@@ -7,6 +7,17 @@ import bcrypt from 'bcryptjs';
 import { logger } from '@/lib/logger';
 import { UAParser } from 'ua-parser-js';
 import { headers } from 'next/headers';
+import { validateToken, createSession, getLatestSession } from '@/lib/sessionUtils';
+
+const SESSION_HARD_EXPIRY = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+const SESSION_SOFT_EXPIRY = 15 * 24 * 60 * 60 * 1000; // 15 days in milliseconds
+
+const isSessionExpiringSoon = (session) => {
+  const now = new Date();
+  const lastAccessed = new Date(session.lastAccessed);
+  const timeDiff = now - lastAccessed;
+  return timeDiff > SESSION_SOFT_EXPIRY;
+};
 
 export const authOptions = {
   providers: [
@@ -45,7 +56,8 @@ export const authOptions = {
             id: user._id.toString(),
             email: user.email,
             name: user.name,
-            role: user.role
+            role: user.role,
+            tokenVersion: user.tokenVersion
           };
         } catch (error) {
           logger.error(`Authorization error: ${error.message}`);
@@ -55,99 +67,126 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
+        // Initial sign in
         token.id = user.id;
         token.email = user.email;
-      }
-
-      if (trigger === 'signOut') {
-        try {
-          await connectDB();
-          // Only deactivate the current session
-          if (session?.sessionId) {
-            await Session.findByIdAndUpdate(session.sessionId, {
-              isActive: false,
-              deactivatedAt: new Date(),
-              deactivatedBy: token.id
-            });
-            logger.info(`Session ${session.sessionId} deactivated for user: ${token.email}`);
-          }
-        } catch (error) {
-          logger.error(`Error deactivating session: ${error.message}`);
+        token.name = user.name;
+        token.role = user.role;
+        token.tokenVersion = user.tokenVersion;
+        
+        // Get the latest session for this user
+        const session = await getLatestSession(user.id);
+        if (session) {
+          token.sessionId = session._id.toString();
         }
       }
-      
+
       return token;
     },
+
     async session({ session, token }) {
       try {
         await connectDB();
         
-        // Check if session is still active in database
-        const dbSession = await Session.findOne({
-          userId: token.id,
-          isActive: true
-        }).sort({ lastAccessed: -1 });
+        if (!token?.id) {
+          logger.warn('No user ID in token - Session expired or invalid');
+          return {
+            expires: new Date(0).toISOString(),
+            user: null,
+            error: 'SESSION_EXPIRED'
+          };
+        }
 
-        if (!dbSession) {
-          throw new Error('Session not found or inactive');
+        // Enhanced session validation
+        const isValid = await validateToken(token, token.sessionId);
+        if (!isValid) {
+          logger.warn(`Invalid session detected for user: ${token.email}`, {
+            tokenId: token.id,
+            sessionId: token.sessionId,
+            timestamp: new Date().toISOString()
+          });
+          return {
+            expires: new Date(0).toISOString(),
+            user: null,
+            error: 'SESSION_INVALID'
+          };
+        }
+
+        // If we don't have a sessionId in token, get the latest session
+        if (!token.sessionId) {
+          const latestSession = await getLatestSession(token.id);
+          if (latestSession) {
+            token.sessionId = latestSession._id.toString();
+            
+            // Check if session is expiring soon
+            if (isSessionExpiringSoon(latestSession)) {
+              logger.warn(`Session expiring soon for user: ${token.email}`, {
+                sessionId: latestSession._id,
+                lastAccessed: latestSession.lastAccessed
+              });
+            }
+          } else {
+            return {
+              expires: new Date(0).toISOString(),
+              user: null,
+              error: 'NO_ACTIVE_SESSION'
+            };
+          }
         }
 
         const updatedSession = {
           ...session,
           user: {
-            ...session.user,
             id: token.id,
             email: token.email,
             name: token.name,
             role: token.role
           },
-          sessionId: dbSession._id.toString()
+          sessionId: token.sessionId,
+          expiresAt: new Date(Date.now() + SESSION_HARD_EXPIRY).toISOString(),
+          warnExpiry: isSessionExpiringSoon(await Session.findById(token.sessionId))
         };
-        
-        // Update last accessed time
-        await Session.findByIdAndUpdate(dbSession._id, {
-          lastAccessed: new Date()
-        });
 
         return updatedSession;
       } catch (error) {
-        logger.error(`Session validation error: ${error.message}`);
+        logger.error(`Session validation error`, {
+          error: error.message,
+          stack: error.stack,
+          tokenId: token?.id,
+          timestamp: new Date().toISOString()
+        });
         return {
           expires: new Date(0).toISOString(),
-          user: null
+          user: null,
+          error: 'INTERNAL_ERROR'
         };
       }
     },
+
     async signIn({ user }) {
       try {
-        await connectDB();
-        
         const headersList = await headers();
-        const userAgent = await headersList.get('user-agent') || 'Unknown';
-        const ip = (await headersList.get('x-forwarded-for'))?.split(',')[0] ||
-                   await headersList.get('x-real-ip') ||
-                   'Unknown';
+        const userAgent = headersList.get('user-agent') || '';
+        const parser = new UAParser(userAgent);
         
-        const ua = UAParser(userAgent);
-        
-        await Session.create({
-          userId: user.id,
-          deviceInfo: {
-            browser: ua.browser.name || 'Unknown',
-            os: ua.os.name || 'Unknown',
-            device: ua.device.type || 'Unknown'
-          },
-          ipAddress: ip,
-          lastAccessed: new Date(),
-          isActive: true
-        });
+        const deviceInfo = {
+          browser: parser.getBrowser().name || 'Unknown',
+          os: parser.getOS().name || 'Unknown',
+          device: parser.getDevice().type || 'desktop'
+        };
 
-        logger.info(`New session created for user: ${user.email}`);
+        // Create new session with token timestamp
+        const session = await createSession(user.id, deviceInfo);
+        if (!session) {
+          throw new Error('Failed to create session');
+        }
+
+        // Don't modify the user object directly
         return true;
       } catch (error) {
-        logger.error(`Error in signIn callback: ${error.message}`);
+        logger.error(`SignIn callback error: ${error.message}`);
         return false;
       }
     }
@@ -171,7 +210,9 @@ export const authOptions = {
     }
   },
   pages: {
-    signIn: '/?showLogin=true',
+    signIn: '/',
+    signOut: '/',
+    error: '/',
   },
   session: {
     strategy: 'jwt',

@@ -1,53 +1,82 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../[...nextauth]/route';
+import { getLatestSession, invalidateAllSessions } from '@/lib/sessionUtils';
+import { Session } from '@/models/Session';
 import { connectDB } from '@/lib/mongodb';
-import Session from '@/models/Session';
 import { logger } from '@/lib/logger';
+import mongoose from 'mongoose';
 
 export async function POST(req) {
   try {
     logger.info('Starting session cleanup process');
     
+    // 1. Get current server session
     const session = await getServerSession(authOptions);
-    if (!session) {
-      logger.warn('Unauthorized session cleanup attempt');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.id) {
+      logger.warn('No active session found');
+      return new Response(
+        JSON.stringify({ error: 'No active session found' }),
+        { status: 401 }
+      );
     }
 
+    // 2. Connect to database
     await connectDB();
 
-    // Get the current session ID from the session object
-    const sessionId = session.sessionId;
-    logger.info(`Attempting to cleanup session: ${sessionId} for user: ${session.user.email}`);
-    
-    if (!sessionId) {
-      logger.error('No session ID found in current session');
-      return NextResponse.json({ error: 'No session ID found' }, { status: 400 });
+    // 3. Get latest session for validation
+    const latestSession = await getLatestSession(session.user.id);
+    if (!latestSession) {
+      logger.info('No active session to cleanup');
+      return new Response(
+        JSON.stringify({ message: 'No active session to cleanup' }),
+        { status: 200 }
+      );
     }
 
-    // Find and delete the specific session
-    const result = await Session.findOneAndDelete({
-      _id: sessionId,
-      userId: session.user.id // Ensure the session belongs to the current user
-    });
-
-    if (!result) {
-      logger.warn(`Session not found or unauthorized: ${sessionId}`);
-      return NextResponse.json({ error: 'Session not found or unauthorized' }, { status: 404 });
+    // 4. Validate token version
+    if (latestSession.tokenVersion !== session.user.tokenVersion) {
+      logger.info('Session already invalidated');
+      return new Response(
+        JSON.stringify({ message: 'Session already invalidated' }),
+        { status: 200 }
+      );
     }
 
-    logger.info(`Successfully cleaned up session ${sessionId} for user: ${session.user.email}`);
-    return NextResponse.json({ 
-      success: true,
-      message: 'Session deleted successfully',
-      sessionId: sessionId
-    });
+    // 5. Invalidate all sessions
+    await invalidateAllSessions(session.user.id);
+
+    // 6. Update session status using mongoose model
+    const SessionModel = mongoose.models.Session || mongoose.model('Session', Session);
+    await SessionModel.updateMany(
+      { userId: session.user.id },
+      { 
+        $set: { 
+          status: 'ended',
+          endedAt: new Date(),
+          endReason: 'user_logout'
+        }
+      }
+    );
+
+    logger.info(`Successfully cleaned up sessions for user: ${session.user.email}`);
+    return new Response(
+      JSON.stringify({ message: 'Sessions cleaned up successfully' }),
+      { status: 200 }
+    );
 
   } catch (error) {
-    logger.error(`Error cleaning up session: ${error.message}`);
-    return NextResponse.json(
-      { error: 'Failed to clean up session' },
+    logger.error('Session cleanup error:', { error: error.message, stack: error.stack });
+    
+    // Return appropriate error message based on error type
+    const errorMessage = error.code === 11000 
+      ? 'Session already being processed'
+      : 'Failed to cleanup session';
+
+    return new Response(
+      JSON.stringify({ 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }),
       { status: 500 }
     );
   }
