@@ -299,7 +299,7 @@ export default function LoginModal({ isOpen, onClose }) {
         await new Promise(resolve => setTimeout(resolve, 100));
         
         // Use router.push for client-side navigation
-        if (result.url) {
+        if (result?.url) {
           router.push(result.url);
         } else {
           router.push(callbackUrl);
@@ -310,6 +310,7 @@ export default function LoginModal({ isOpen, onClose }) {
         try {
           const res = await fetch('/api/auth/signup', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               name: formData.name,
@@ -430,6 +431,7 @@ export default function LoginModal({ isOpen, onClose }) {
       // First verify OTP
       const res = await fetch('/api/auth/verify-email', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email.toLowerCase(),
@@ -535,6 +537,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
@@ -584,6 +587,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: resetEmail,
@@ -653,6 +657,7 @@ export default function LoginModal({ isOpen, onClose }) {
       // Verify OTP
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: resetEmail,
@@ -711,6 +716,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: resetEmail,
@@ -762,6 +768,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: resetEmail,

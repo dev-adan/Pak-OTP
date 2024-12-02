@@ -52,6 +52,7 @@ export default function Navbar({ onLoginClick }) {
           // We'll use the session object which contains the current sessionId
           const response = await fetch('/api/auth/sessions/cleanup', {
             method: 'POST',
+            credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
             }

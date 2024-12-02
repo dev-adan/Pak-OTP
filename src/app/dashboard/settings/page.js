@@ -57,7 +57,12 @@ export default function Settings() {
     if (session) {
       const fetchSessions = async () => {
         try {
-          const res = await fetch('/api/auth/sessions');
+          const res = await fetch('/api/auth/sessions', {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
           const data = await res.json();
           
           if (data.sessions) {
@@ -128,6 +133,7 @@ export default function Settings() {
 
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -188,7 +194,12 @@ export default function Settings() {
       setIsLogoutModalOpen(false);
 
       // Refresh the sessions list
-      const sessionsRes = await fetch('/api/auth/sessions');
+      const sessionsRes = await fetch('/api/auth/sessions', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       const sessionsData = await sessionsRes.json();
       
       if (sessionsData.sessions) {
